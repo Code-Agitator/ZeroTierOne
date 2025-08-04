@@ -16,8 +16,6 @@
 
 #include "Constants.hpp"
 
-#include <algorithm>
-#include <stdexcept>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
