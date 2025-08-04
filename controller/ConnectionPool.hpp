@@ -19,6 +19,7 @@
 #endif
 
 #include "../node/Metrics.hpp"
+#include "opentelemetry/trace/provider.h"
 
 #include <deque>
 #include <exception>
@@ -87,6 +88,11 @@ template <class T> class ConnectionPool {
 	 */
 	std::shared_ptr<T> borrow()
 	{
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("connection_pool");
+		auto span = tracer->StartSpan("connection_pool::borrow");
+		auto scope = tracer->WithActiveSpan(span);
+
 		std::unique_lock<std::mutex> l(m_poolMutex);
 
 		while ((m_pool.size() + m_borrowed.size()) < m_minPoolSize) {
@@ -104,6 +110,7 @@ template <class T> class ConnectionPool {
 					return std::static_pointer_cast<T>(conn);
 				}
 				catch (std::exception& e) {
+					span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
 					Metrics::pool_errors++;
 					throw ConnectionUnavailable();
 				}
@@ -121,12 +128,15 @@ template <class T> class ConnectionPool {
 							return std::static_pointer_cast<T>(conn);
 						}
 						catch (std::exception& e) {
+							span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
 							// Error creating a replacement connection
 							Metrics::pool_errors++;
 							throw ConnectionUnavailable();
 						}
 					}
 				}
+
+				span->SetStatus(opentelemetry::trace::StatusCode::kError, "No available connections in pool");
 				// Nothing available
 				Metrics::pool_errors++;
 				throw ConnectionUnavailable();
@@ -151,6 +161,11 @@ template <class T> class ConnectionPool {
 	 */
 	void unborrow(std::shared_ptr<T> conn)
 	{
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("connection_pool");
+		auto span = tracer->StartSpan("connection_pool::unborrow");
+		auto scope = tracer->WithActiveSpan(span);
+
 		// Lock
 		std::unique_lock<std::mutex> lock(m_poolMutex);
 		m_borrowed.erase(conn);

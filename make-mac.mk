@@ -103,6 +103,17 @@ ifeq ($(ZT_VAULT_SUPPORT),1)
 	LIBS+=-lcurl
 endif
 
+OTEL_VERSION=1.21.0
+ifeq (${ZT_OTEL},1)
+	OTEL_INSTALL_DIR=ext/opentelemetry-cpp-${OTEL_VERSION}/localinstall
+	DEFS+=-DZT_OTEL
+	INCLUDES+=-I${OTEL_INSTALL_DIR}/include
+	LIBS+=-L${OTEL_INSTALL_DIR}/lib -lopentelemetry_exporter_in_memory_metric -lopentelemetry_exporter_in_memory -lopentelemetry_exporter_ostream_logs -lopentelemetry_exporter_ostream_metrics -lopentelemetry_exporter_ostream_span -lopentelemetry_trace -lopentelemetry_common -lopentelemetry_resources -lopentelemetry_logs -lopentelemetry_metrics -lopentelemetry_version
+else
+	OTEL_INSTALL_DIR=ext/opentelemetry-cpp-api-only
+	INCLUDES+=-I${OTEL_INSTALL_DIR}/include
+endif
+
 all: one
 
 ext/x64-salsa2012-asm/salsa2012.o:
@@ -116,9 +127,9 @@ osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm
 	$(CXX) $(CXXFLAGS) -c osdep/MacDNSHelper.mm -o osdep/MacDNSHelper.o 
 
 ifeq ($(ZT_CONTROLLER),1)
-one:	zeroidc smeeclient $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
+one:	otel zeroidc smeeclient $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
 else
-one:	zeroidc $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
+one:	otel zeroidc $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
 endif
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS) rustybits/target/libzeroidc.a
 	# $(STRIP) zerotier-one
@@ -216,7 +227,16 @@ docker-release:	_buildx
 	docker buildx build --platform linux/386,linux/amd64,linux/arm/v7,linux/arm64,linux/mips64le,linux/ppc64le,linux/s390x -t zerotier/zerotier:${RELEASE_DOCKER_TAG} -t zerotier/zerotier:latest --build-arg VERSION=${RELEASE_VERSION} -f Dockerfile.release . --push
 	
 clean:
-	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_* rustybits/target/
+	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_* rustybits/target/ ext/opentelemetry-cpp-${OTEL_VERSION}/localinstall ext/opentelemetry-cpp-${OTEL_VERSION}/build
+
+ifeq (${ZT_OTEL},1)
+otel:
+	cd ext/opentelemetry-cpp-1.21.0 && mkdir -p localinstall && cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$(shell pwd)/ext/opentelemetry-cpp-1.21.0/localinstall -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOS_VERSION_MIN} -DBUILD_TESTING=OFF -DOPENTELEMETRY_INSTALL=ON -DWITH_BENCHMARK=OFF -DWITH_EXAMPLES=OFF -DWITH_FUNC_TESTS=OFF
+	cd ext/opentelemetry-cpp-1.21.0/build && make install
+else
+otel:
+	@echo "OpenTelemetry Exporter not enabled, skipping build."
+endif
 
 distclean:	clean
 

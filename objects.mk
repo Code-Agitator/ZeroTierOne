@@ -40,7 +40,6 @@ ONE_OBJS=\
 	controller/FileDB.o \
 	controller/LFDB.o \
 	controller/CtlUtil.o \
-	controller/PostgreSQL.o \
 	controller/CV1.o \
 	controller/CV2.o \
 	osdep/EthernetTap.o \

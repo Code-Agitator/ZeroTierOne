@@ -13,6 +13,8 @@
 
 #include "DBMirrorSet.hpp"
 
+#include "opentelemetry/trace/provider.h"
+
 namespace ZeroTier {
 
 DBMirrorSet::DBMirrorSet(DB::ChangeListener* listener) : _listener(listener), _running(true), _syncCheckerThread(), _dbs(), _dbs_l()
@@ -24,6 +26,11 @@ DBMirrorSet::DBMirrorSet(DB::ChangeListener* listener) : _listener(listener), _r
 					return;
 				std::this_thread::sleep_for(std::chrono::milliseconds(500));
 			}
+
+			auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+			auto tracer = provider->GetTracer("db_mirror_set");
+			auto span = tracer->StartSpan("db::syncChecker");
+			auto scope = tracer->WithActiveSpan(span);
 
 			std::vector<std::shared_ptr<DB> > dbs;
 			{
@@ -77,6 +84,11 @@ DBMirrorSet::~DBMirrorSet()
 
 bool DBMirrorSet::hasNetwork(const uint64_t networkId) const
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::hasNetwork");
+	auto scope = tracer->WithActiveSpan(span);
+
 	std::shared_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
 		if ((*d)->hasNetwork(networkId))
@@ -87,6 +99,13 @@ bool DBMirrorSet::hasNetwork(const uint64_t networkId) const
 
 bool DBMirrorSet::get(const uint64_t networkId, nlohmann::json& network)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::getNetwork");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+
 	std::shared_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
 		if ((*d)->get(networkId, network)) {
@@ -98,6 +117,15 @@ bool DBMirrorSet::get(const uint64_t networkId, nlohmann::json& network)
 
 bool DBMirrorSet::get(const uint64_t networkId, nlohmann::json& network, const uint64_t memberId, nlohmann::json& member)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::getNetworkAndMember");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	char memberIdStr[11];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
+
 	std::shared_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
 		if ((*d)->get(networkId, network, memberId, member))
@@ -108,6 +136,15 @@ bool DBMirrorSet::get(const uint64_t networkId, nlohmann::json& network, const u
 
 bool DBMirrorSet::get(const uint64_t networkId, nlohmann::json& network, const uint64_t memberId, nlohmann::json& member, DB::NetworkSummaryInfo& info)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::getNetworkAndMemberWithSummary");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	char memberIdStr[11];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
+
 	std::shared_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
 		if ((*d)->get(networkId, network, memberId, member, info))
@@ -118,6 +155,13 @@ bool DBMirrorSet::get(const uint64_t networkId, nlohmann::json& network, const u
 
 bool DBMirrorSet::get(const uint64_t networkId, nlohmann::json& network, std::vector<nlohmann::json>& members)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::getNetworkAndMembers");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+
 	std::shared_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
 		if ((*d)->get(networkId, network, members))
@@ -128,6 +172,11 @@ bool DBMirrorSet::get(const uint64_t networkId, nlohmann::json& network, std::ve
 
 AuthInfo DBMirrorSet::getSSOAuthInfo(const nlohmann::json& member, const std::string& redirectURL)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::getSSOAuthInfo");
+	auto scope = tracer->WithActiveSpan(span);
+
 	std::shared_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
 		AuthInfo info = (*d)->getSSOAuthInfo(member, redirectURL);
@@ -140,6 +189,11 @@ AuthInfo DBMirrorSet::getSSOAuthInfo(const nlohmann::json& member, const std::st
 
 void DBMirrorSet::networks(std::set<uint64_t>& networks)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::networks");
+	auto scope = tracer->WithActiveSpan(span);
+
 	std::shared_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
 		(*d)->networks(networks);
@@ -148,6 +202,11 @@ void DBMirrorSet::networks(std::set<uint64_t>& networks)
 
 bool DBMirrorSet::waitForReady()
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::waitForReady");
+	auto scope = tracer->WithActiveSpan(span);
+
 	bool r = false;
 	std::shared_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
@@ -158,6 +217,11 @@ bool DBMirrorSet::waitForReady()
 
 bool DBMirrorSet::isReady()
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::isReady");
+	auto scope = tracer->WithActiveSpan(span);
+
 	std::shared_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
 		if (! (*d)->isReady())
@@ -168,6 +232,11 @@ bool DBMirrorSet::isReady()
 
 bool DBMirrorSet::save(nlohmann::json& record, bool notifyListeners)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::save");
+	auto scope = tracer->WithActiveSpan(span);
+
 	std::vector<std::shared_ptr<DB> > dbs;
 	{
 		std::unique_lock<std::shared_mutex> l(_dbs_l);
@@ -191,6 +260,13 @@ bool DBMirrorSet::save(nlohmann::json& record, bool notifyListeners)
 
 void DBMirrorSet::eraseNetwork(const uint64_t networkId)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::eraseNetwork");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+
 	std::unique_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
 		(*d)->eraseNetwork(networkId);
@@ -199,6 +275,15 @@ void DBMirrorSet::eraseNetwork(const uint64_t networkId)
 
 void DBMirrorSet::eraseMember(const uint64_t networkId, const uint64_t memberId)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::eraseMember");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	char memberIdStr[11];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
+
 	std::unique_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
 		(*d)->eraseMember(networkId, memberId);
@@ -207,6 +292,18 @@ void DBMirrorSet::eraseMember(const uint64_t networkId, const uint64_t memberId)
 
 void DBMirrorSet::nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress& physicalAddress, const char* osArch)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::nodeIsOnline");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	char memberIdStr[11];
+	char phyAddressStr[INET6_ADDRSTRLEN];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
+	span->SetAttribute("physical_address", physicalAddress.toString(phyAddressStr));
+	span->SetAttribute("os_arch", osArch);
+
 	std::shared_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
 		(*d)->nodeIsOnline(networkId, memberId, physicalAddress, osArch);
@@ -220,6 +317,13 @@ void DBMirrorSet::nodeIsOnline(const uint64_t networkId, const uint64_t memberId
 
 void DBMirrorSet::onNetworkUpdate(const void* db, uint64_t networkId, const nlohmann::json& network)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::onNetworkUpdate");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+
 	nlohmann::json record(network);
 	std::unique_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
@@ -232,6 +336,15 @@ void DBMirrorSet::onNetworkUpdate(const void* db, uint64_t networkId, const nloh
 
 void DBMirrorSet::onNetworkMemberUpdate(const void* db, uint64_t networkId, uint64_t memberId, const nlohmann::json& member)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::onNetworkMemberUpdate");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	char memberIdStr[11];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
+
 	nlohmann::json record(member);
 	std::unique_lock<std::shared_mutex> l(_dbs_l);
 	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
@@ -244,6 +357,15 @@ void DBMirrorSet::onNetworkMemberUpdate(const void* db, uint64_t networkId, uint
 
 void DBMirrorSet::onNetworkMemberDeauthorize(const void* db, uint64_t networkId, uint64_t memberId)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("db_mirror_set");
+	auto span = tracer->StartSpan("db_mirror_set::onNetworkMemberDeauthorize");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	char memberIdStr[11];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
+
 	_listener->onNetworkMemberDeauthorize(this, networkId, memberId);
 }
 

@@ -13,5 +13,7 @@ RUN apt -y install \
     binutils \
     perf-tools-unstable \
     google-perftools \
-    gnupg
+    gnupg \
+    libgrpc++1.51 \
+    libgrpc29 
 

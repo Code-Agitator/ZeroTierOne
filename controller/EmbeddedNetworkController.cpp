@@ -47,6 +47,7 @@
 #include "../node/MAC.hpp"
 #include "../node/NetworkConfig.hpp"
 #include "../node/Node.hpp"
+#include "opentelemetry/trace/provider.h"
 
 using json = nlohmann::json;
 
@@ -65,6 +66,11 @@ namespace {
 
 static json _renderRule(ZT_VirtualNetworkRule& rule)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("embedded_controller");
+	auto span = tracer->StartSpan("embedded_controller::renderRule");
+	auto scope = tracer->WithActiveSpan(span);
+
 	char tmp[128];
 	json r = json::object();
 	const ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rule.t & 0x3f);
@@ -272,6 +278,11 @@ static json _renderRule(ZT_VirtualNetworkRule& rule)
 
 static bool _parseRule(json& r, ZT_VirtualNetworkRule& rule)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("embedded_controller");
+	auto span = tracer->StartSpan("embedded_controller::parseRule");
+	auto scope = tracer->WithActiveSpan(span);
+
 	if (! r.is_object())
 		return false;
 
@@ -588,6 +599,11 @@ void EmbeddedNetworkController::setSSORedirectURL(const std::string& url)
 
 void EmbeddedNetworkController::init(const Identity& signingId, Sender* sender)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("embedded_controller");
+	auto span = tracer->StartSpan("embedded_controller::init");
+	auto scope = tracer->WithActiveSpan(span);
+
 	char tmp[64];
 	_signingId = signingId;
 	_sender = sender;
@@ -596,16 +612,16 @@ void EmbeddedNetworkController::init(const Identity& signingId, Sender* sender)
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	if ((_path.length() > 9) && (_path.substr(0, 9) == "postgres:")) {
 		fprintf(stderr, "CV1\n");
-		_db.addDB(std::shared_ptr<DB>(new CV1(_signingId, _path.substr(9).c_str(), _listenPort, _rc)));
+		_db.addDB(std::shared_ptr<CV1>(new CV1(_signingId, _path.substr(9).c_str(), _listenPort, _rc)));
 	}
 	else if ((_path.length() > 4) && (_path.substr(0, 4) == "cv2:")) {
 		fprintf(stderr, "CV2\n");
-		_db.addDB(std::shared_ptr<DB>(new CV2(_signingId, _path.substr(4).c_str(), _listenPort)));
+		_db.addDB(std::shared_ptr<CV2>(new CV2(_signingId, _path.substr(4).c_str(), _listenPort)));
 	}
 	else {
 		fprintf(stderr, "FileDB\n");
 #endif
-		_db.addDB(std::shared_ptr<DB>(new FileDB(_path.c_str())));
+		_db.addDB(std::shared_ptr<FileDB>(new FileDB(_path.c_str())));
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	}
 #endif
@@ -645,6 +661,11 @@ void EmbeddedNetworkController::init(const Identity& signingId, Sender* sender)
 
 void EmbeddedNetworkController::request(uint64_t nwid, const InetAddress& fromAddr, uint64_t requestPacketId, const Identity& identity, const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY>& metaData)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("embedded_controller");
+	auto span = tracer->StartSpan("embedded_controller::request");
+	auto scope = tracer->WithActiveSpan(span);
+
 	if (((! _signingId) || (! _signingId.hasPrivate())) || (_signingId.address().toInt() != (nwid >> 24)) || (! _sender))
 		return;
 	_startThreads();
@@ -672,6 +693,11 @@ void EmbeddedNetworkController::request(uint64_t nwid, const InetAddress& fromAd
 
 std::string EmbeddedNetworkController::networkUpdateFromPostData(uint64_t networkID, const std::string& body)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("embedded_controller");
+	auto span = tracer->StartSpan("embedded_controller::networkUpdateFromPostData");
+	auto scope = tracer->WithActiveSpan(span);
+
 	json b = OSUtils::jsonParse(body);
 
 	char nwids[24];
@@ -959,6 +985,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	std::string memberPath = "/controller/network/([0-9a-fA-F]{16})/member/([0-9a-fA-F]{10})";
 
 	auto controllerGet = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::controllerGet");
+		auto scope = tracer->WithActiveSpan(span);
+
 		char tmp[4096];
 		const bool dbOk = _db.isReady();
 		OSUtils::ztsnprintf(
@@ -979,6 +1010,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Get(controllerPath, controllerGet);
 
 	auto networkListGet = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::networkListGet");
+		auto scope = tracer->WithActiveSpan(span);
+
 		std::set<uint64_t> networkIds;
 		_db.networks(networkIds);
 		char tmp[64];
@@ -995,6 +1031,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Get(networkListPath, networkListGet);
 
 	auto networkListGet2 = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::networkListGet2");
+		auto scope = tracer->WithActiveSpan(span);
+
 		std::set<uint64_t> networkIds;
 		_db.networks(networkIds);
 
@@ -1043,6 +1084,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Get(networkListPath2, networkListGet2);
 
 	auto networkGet = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::networkGet");
+		auto scope = tracer->WithActiveSpan(span);
+
 		auto networkID = req.matches[1];
 		uint64_t nwid = Utils::hexStrToU64(networkID.str().c_str());
 		json network;
@@ -1057,6 +1103,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Get(networkPath, networkGet);
 
 	auto createNewNetwork = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::createNewNetwork");
+		auto scope = tracer->WithActiveSpan(span);
+
 		// fprintf(stderr, "creating new network (new style)\n");
 		uint64_t nwid = 0;
 		uint64_t nwidPrefix = (Utils::hexStrToU64(_signingIdAddressString.c_str()) << 24) & 0xffffffffff000000ULL;
@@ -1084,6 +1135,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Post(networkListPath, createNewNetwork);
 
 	auto createNewNetworkOldAndBusted = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::createNewNetworkOldAndBusted");
+		auto scope = tracer->WithActiveSpan(span);
+
 		auto inID = req.matches[1].str();
 
 		if (inID != _signingIdAddressString) {
@@ -1116,6 +1172,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Post(oldAndBustedNetworkCreatePath, createNewNetworkOldAndBusted);
 
 	auto networkPost = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::networkPost");
+		auto scope = tracer->WithActiveSpan(span);
+
 		auto networkID = req.matches[1].str();
 		uint64_t nwid = Utils::hexStrToU64(networkID.c_str());
 
@@ -1128,6 +1189,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Post(networkPath, networkPost);
 
 	auto networkDelete = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::networkDelete");
+		auto scope = tracer->WithActiveSpan(span);
+
 		auto networkID = req.matches[1].str();
 		uint64_t nwid = Utils::hexStrToU64(networkID.c_str());
 
@@ -1144,6 +1210,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Delete(networkPath, networkDelete);
 
 	auto memberListGet = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::memberListGet");
+		auto scope = tracer->WithActiveSpan(span);
+
 		auto networkID = req.matches[1];
 		uint64_t nwid = Utils::hexStrToU64(networkID.str().c_str());
 		json network;
@@ -1170,6 +1241,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Get(memberListPath, memberListGet);
 
 	auto memberListGet2 = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::memberListGet2");
+		auto scope = tracer->WithActiveSpan(span);
+
 		auto networkID = req.matches[1];
 		uint64_t nwid = Utils::hexStrToU64(networkID.str().c_str());
 		json network;
@@ -1208,6 +1284,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Get(memberListPath2, memberListGet2);
 
 	auto memberGet = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::memberGet");
+		auto scope = tracer->WithActiveSpan(span);
+
 		auto networkID = req.matches[1];
 		auto memberID = req.matches[2];
 		uint64_t nwid = Utils::hexStrToU64(networkID.str().c_str());
@@ -1225,6 +1306,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Get(memberPath, memberGet);
 
 	auto memberPost = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::memberPost");
+		auto scope = tracer->WithActiveSpan(span);
+
 		auto networkID = req.matches[1].str();
 		auto memberID = req.matches[2].str();
 		uint64_t nwid = Utils::hexStrToU64(networkID.c_str());
@@ -1347,6 +1433,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 	sv6.Post(memberPath, memberPost);
 
 	auto memberDelete = [&, setContent](const httplib::Request& req, httplib::Response& res) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_controller");
+		auto span = tracer->StartSpan("embedded_controller::memberDelete");
+		auto scope = tracer->WithActiveSpan(span);
+
 		auto networkID = req.matches[1].str();
 		auto memberID = req.matches[2].str();
 
@@ -1374,6 +1465,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(httplib::Server& s, ht
 
 void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace& rt)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("embedded_controller");
+	auto span = tracer->StartSpan("embedded_controller::handleRemoteTrace");
+	auto scope = tracer->WithActiveSpan(span);
+
 	static volatile unsigned long idCounter = 0;
 	char id[128], tmp[128];
 	std::string k, v;
@@ -1436,6 +1532,11 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace& rt)
 
 void EmbeddedNetworkController::onNetworkUpdate(const void* db, uint64_t networkId, const nlohmann::json& network)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("embedded_controller");
+	auto span = tracer->StartSpan("embedded_controller::onNetworkUpdate");
+	auto scope = tracer->WithActiveSpan(span);
+
 	// Send an update to all members of the network that are online
 	const int64_t now = OSUtils::now();
 	std::lock_guard<std::mutex> l(_memberStatus_l);
@@ -1447,6 +1548,11 @@ void EmbeddedNetworkController::onNetworkUpdate(const void* db, uint64_t network
 
 void EmbeddedNetworkController::onNetworkMemberUpdate(const void* db, uint64_t networkId, uint64_t memberId, const nlohmann::json& member)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("embedded_controller");
+	auto span = tracer->StartSpan("embedded_controller::onNetworkMemberUpdate");
+	auto scope = tracer->WithActiveSpan(span);
+
 	// Push update to member if online
 	try {
 		std::lock_guard<std::mutex> l(_memberStatus_l);
@@ -1460,6 +1566,11 @@ void EmbeddedNetworkController::onNetworkMemberUpdate(const void* db, uint64_t n
 
 void EmbeddedNetworkController::onNetworkMemberDeauthorize(const void* db, uint64_t networkId, uint64_t memberId)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("embedded_controller");
+	auto span = tracer->StartSpan("embedded_controller::onNetworkMemberDeauthorize");
+	auto scope = tracer->WithActiveSpan(span);
+
 	const int64_t now = OSUtils::now();
 	Revocation rev((uint32_t)_node->prng(), networkId, 0, now, ZT_REVOCATION_FLAG_FAST_PROPAGATE, Address(memberId), Revocation::CREDENTIAL_TYPE_COM);
 	rev.sign(_signingId);
@@ -1474,6 +1585,11 @@ void EmbeddedNetworkController::onNetworkMemberDeauthorize(const void* db, uint6
 
 void EmbeddedNetworkController::_request(uint64_t nwid, const InetAddress& fromAddr, uint64_t requestPacketId, const Identity& identity, const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY>& metaData)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("embedded_controller");
+	auto span = tracer->StartSpan("embedded_controller::_request");
+	auto scope = tracer->WithActiveSpan(span);
+
 	Metrics::network_config_request++;
 	auto tid = std::this_thread::get_id();
 	std::stringstream ss;
@@ -2193,6 +2309,11 @@ void EmbeddedNetworkController::_request(uint64_t nwid, const InetAddress& fromA
 
 void EmbeddedNetworkController::_startThreads()
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("embedded_network_controller");
+	auto span = tracer->StartSpan("embedded_network_controller::_startThreads");
+	auto scope = tracer->WithActiveSpan(span);
+
 	std::lock_guard<std::mutex> l(_threads_l);
 	if (! _threads.empty()) {
 		return;
@@ -2232,6 +2353,11 @@ void EmbeddedNetworkController::_startThreads()
 void EmbeddedNetworkController::_ssoExpiryThread()
 {
 	while (_ssoExpiryRunning) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("embedded_network_controller");
+		auto span = tracer->StartSpan("embedded_network_controller::_ssoExpiryThread");
+		auto scope = tracer->WithActiveSpan(span);
+
 		std::vector<_MemberStatusKey> expired;
 		nlohmann::json network, member;
 		int64_t now = OSUtils::now();
@@ -2262,6 +2388,7 @@ void EmbeddedNetworkController::_ssoExpiryThread()
 			Metrics::sso_member_deauth++;
 			onNetworkMemberDeauthorize(nullptr, e->networkId, e->nodeId);
 		}
+		span->End();
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	}
 }

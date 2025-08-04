@@ -14,11 +14,17 @@
 #include "FileDB.hpp"
 
 #include "../node/Metrics.hpp"
+#include "opentelemetry/trace/provider.h"
 
 namespace ZeroTier {
 
 FileDB::FileDB(const char* path) : DB(), _path(path), _networksPath(_path + ZT_PATH_SEPARATOR_S + "network"), _tracePath(_path + ZT_PATH_SEPARATOR_S + "trace"), _running(true)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("filedb");
+	auto span = tracer->StartSpan("filedb::FileDB");
+	auto scope = tracer->WithActiveSpan(span);
+
 	OSUtils::mkdir(_path.c_str());
 	OSUtils::lockDownFile(_path.c_str(), true);
 	OSUtils::mkdir(_networksPath.c_str());
@@ -85,11 +91,19 @@ bool FileDB::isReady()
 
 bool FileDB::save(nlohmann::json& record, bool notifyListeners)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("filedb");
+	auto span = tracer->StartSpan("filedb::save");
+	auto scope = tracer->WithActiveSpan(span);
+
 	char p1[4096], p2[4096], pb[4096];
 	bool modified = false;
 	try {
 		const std::string objtype = record["objtype"];
 		if (objtype == "network") {
+			auto span = tracer->StartSpan("filedb::save::network");
+			auto scope = tracer->WithActiveSpan(span);
+
 			const uint64_t nwid = OSUtils::jsonIntHex(record["id"], 0ULL);
 			if (nwid) {
 				nlohmann::json old;
@@ -106,6 +120,9 @@ bool FileDB::save(nlohmann::json& record, bool notifyListeners)
 			}
 		}
 		else if (objtype == "member") {
+			auto span = tracer->StartSpan("filedb::save::member");
+			auto scope = tracer->WithActiveSpan(span);
+
 			const uint64_t id = OSUtils::jsonIntHex(record["id"], 0ULL);
 			const uint64_t nwid = OSUtils::jsonIntHex(record["nwid"], 0ULL);
 			if ((id) && (nwid)) {
@@ -136,6 +153,11 @@ bool FileDB::save(nlohmann::json& record, bool notifyListeners)
 
 void FileDB::eraseNetwork(const uint64_t networkId)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("filedb");
+	auto span = tracer->StartSpan("filedb::eraseNetwork");
+	auto scope = tracer->WithActiveSpan(span);
+
 	nlohmann::json network, nullJson;
 	get(networkId, network);
 	char p[16384];
@@ -150,6 +172,11 @@ void FileDB::eraseNetwork(const uint64_t networkId)
 
 void FileDB::eraseMember(const uint64_t networkId, const uint64_t memberId)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("filedb");
+	auto span = tracer->StartSpan("filedb::eraseMember");
+	auto scope = tracer->WithActiveSpan(span);
+
 	nlohmann::json network, member, nullJson;
 	get(networkId, network, memberId, member);
 	char p[4096];
@@ -162,6 +189,11 @@ void FileDB::eraseMember(const uint64_t networkId, const uint64_t memberId)
 
 void FileDB::nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress& physicalAddress, const char* osArch)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("filedb");
+	auto span = tracer->StartSpan("filedb::nodeIsOnline");
+	auto scope = tracer->WithActiveSpan(span);
+
 	char mid[32], atmp[64];
 	OSUtils::ztsnprintf(mid, sizeof(mid), "%.10llx", (unsigned long long)memberId);
 	physicalAddress.toString(atmp);
