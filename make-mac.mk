@@ -129,9 +129,9 @@ osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm
 	$(CXX) $(CXXFLAGS) -c osdep/MacDNSHelper.mm -o osdep/MacDNSHelper.o 
 
 ifeq ($(ZT_CONTROLLER),1)
-one:	otel zeroidc smeeclient $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
+one:	otel rustybits $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
 else
-one:	otel zeroidc $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
+one:	otel rustybits $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
 endif
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS) rustybits/target/librustybits.a
 	# $(STRIP) zerotier-one
@@ -142,15 +142,6 @@ endif
 zerotier-one: one
 
 rustybits: rustybits/target/rustybits.a
-
-# ifeq ($(ZT_CONTROLLER),1)
-# smeeclient: rustybits/target/libsmeeclient.a
-
-# rustybits/target/libsmeeclient.a:	FORCE
-# 	cd rustybits && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build -F smeeclient --target=x86_64-apple-darwin $(EXTRA_CARGO_FLAGS)
-# 	cd rustybits && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build -F smeeclient --target=aarch64-apple-darwin $(EXTRA_CARGO_FLAGS)
-# 	cd rustybits && lipo -create target/x86_64-apple-darwin/$(RUST_VARIANT)/libsmeeclient.a target/aarch64-apple-darwin/$(RUST_VARIANT)/libsmeeclient.a -output target/libsmeeclient.a
-# endif
 
 rustybits/target/rustybits.a:	FORCE
 	cd rustybits && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=x86_64-apple-darwin $(EXTRA_CARGO_FLAGS)
@@ -164,7 +155,7 @@ zerotier-idtool: one
 
 zerotier-cli: one
 
-$(ONE_OBJS): zeroidc
+$(ONE_OBJS): rustybits
 
 libzerotiercore.a:	$(CORE_OBJS)
 	ar rcs libzerotiercore.a $(CORE_OBJS)
