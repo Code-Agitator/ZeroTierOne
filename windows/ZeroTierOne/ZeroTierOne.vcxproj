@@ -420,7 +420,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;zeroidc.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;rustybits.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(SolutionDir)\..\rustybits\target\i686-pc-windows-msvc\debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -463,7 +463,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>wbemuuid.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;zeroidc.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wbemuuid.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;rustybits.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalOptions>"notelemetry.obj" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalLibraryDirectories>$(SolutionDir)..\rustybits\target\x86_64-pc-windows-msvc\debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -486,7 +486,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>wbemuuid.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;zeroidc.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wbemuuid.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;rustybits.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(SolutionDir)..\rustybits\target\aarch64-pc-windows-msvc\debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -566,7 +566,7 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;zeroidc.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;rustybits.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(SolutionDir)..\rustybits\target\i686-pc-windows-msvc\release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -604,7 +604,7 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>wbemuuid.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;zeroidc.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wbemuuid.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;rustybits.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(SolutionDir)..\rustybits\target\x86_64-pc-windows-msvc\release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -642,7 +642,7 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>wbemuuid.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;zeroidc.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wbemuuid.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;rustybits.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(SolutionDir)..\rustybits\target\aarch64-pc-windows-msvc\release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
