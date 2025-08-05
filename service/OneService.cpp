@@ -2851,13 +2851,14 @@ class OneServiceImpl : public OneService {
 				std::string linkSelectMethodStr;
 				if (customPolicy.contains("linkSelectMethod")) {
 					linkSelectMethodStr = OSUtils::jsonString(customPolicy["linkSelectMethod"], "always");
-				} else {
+				}
+				else {
 					linkSelectMethodStr = OSUtils::jsonString(customPolicy["activeReselect"], "always");
 					if (customPolicy.contains("activeReselect")) {
 						fprintf(stderr, "warning: 'activeReselect' is deprecated, please use 'linkSelectMethod' instead in policy '%s'\n", customPolicyStr.c_str());
 					}
 				}
-				
+
 				if (linkSelectMethodStr == "always") {
 					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_ALWAYS);
 				}
