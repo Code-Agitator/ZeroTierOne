@@ -14,6 +14,7 @@ DEFS?=
 LDLIBS?=
 DESTDIR?=
 EXTRA_DEPS?=
+ZT_CARGO_FLAGS?=
 
 include objects.mk
 ifeq ($(ZT_EXTOSDEP),1)
@@ -67,7 +68,6 @@ ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
 	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++17 -pthread $(INCLUDES) $(DEFS)
 	ZT_TRACE=1
-	ZT_CARGO_FLAGS=
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
@@ -77,7 +77,7 @@ else
 	CXXFLAGS?=-O3 -fstack-protector
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS?=-pie -Wl,-z,relro,-z,now
-	ZT_CARGO_FLAGS=--release
+	ZT_CARGO_FLAGS+=--release
 endif
 
 ifeq ($(ZT_QNAP), 1)
@@ -305,9 +305,9 @@ ifeq ($(ZT_SSO_SUPPORTED), 1)
 	ifeq ($(ZT_EMBEDDED),)
 		override DEFS+=-DZT_SSO_SUPPORTED=1
 		ifeq ($(ZT_DEBUG),1)
-			LDLIBS+=rustybits/target/debug/libzeroidc.a -ldl -lssl -lcrypto
+			LDLIBS+=rustybits/target/debug/librustybits.a -ldl -lssl -lcrypto
 		else
-			LDLIBS+=rustybits/target/release/libzeroidc.a -ldl -lssl -lcrypto
+			LDLIBS+=rustybits/target/release/librustybits.a -ldl -lssl -lcrypto
 		endif
 	endif
 endif
@@ -345,10 +345,11 @@ ifeq ($(ZT_CONTROLLER),1)
 	override LDLIBS+=-Lext/libpqxx-7.7.3/install/ubuntu22.04/$(EXT_ARCH)/lib -lpqxx -lpq ext/hiredis-1.0.2/lib/ubuntu22.04/$(EXT_ARCH)/libhiredis.a ext/redis-plus-plus-1.3.3/install/ubuntu22.04/$(EXT_ARCH)/lib/libredis++.a -lssl -lcrypto
 	override DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_NO_PEER_METRICS -DZT_OPENTELEMETRY_ENABLED
 	override INCLUDES+=-I/usr/include/postgresql -Iext/libpqxx-7.7.3/install/ubuntu22.04/$(EXT_ARCH)/include -Iext/hiredis-1.0.2/include/ -Iext/redis-plus-plus-1.3.3/install/ubuntu22.04/$(EXT_ARCH)/include/sw/
+	override ZT_CARGO_FLAGS+=-F ztcontroller
 	ifeq ($(ZT_DEBUG),1)
-		override LDLIBS+=rustybits/target/debug/libsmeeclient.a
+		override LDLIBS+=rustybits/target/debug/librustybits.a
 	else
-		override LDLIBS+=rustybits/target/release/libsmeeclient.a
+		override LDLIBS+=rustybits/target/release/librustybits.a
 	endif
 endif
 
@@ -409,7 +410,7 @@ zerotier-idtool: zerotier-one
 zerotier-cli: zerotier-one
 	ln -sf zerotier-one zerotier-cli
 
-$(ONE_OBJS): zeroidc smeeclient
+$(ONE_OBJS): zeroidc rustybits
 
 libzerotiercore.a:	FORCE
 	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++17 -fstack-protector -fPIC" $(CORE_OBJS)
@@ -477,17 +478,10 @@ debug:	FORCE
 ifeq ($(ZT_SSO_SUPPORTED), 1)
 ifeq ($(ZT_EMBEDDED),)
 zeroidc:	FORCE
-	export PATH=/${HOME}/.cargo/bin:$$PATH; cd rustybits && cargo build $(ZT_CARGO_FLAGS) -p zeroidc
+	export PATH=/${HOME}/.cargo/bin:$$PATH; cd rustybits && cargo build $(ZT_CARGO_FLAGS)
 endif
 else
 zeroidc:
-endif
-
-ifeq ($(ZT_CONTROLLER), 1)
-smeeclient:	FORCE
-	export PATH=/${HOME}/.cargo/bin:$$PATH; cd rustybits && cargo build $(ZT_CARGO_FLAGS) -p smeeclient
-else
-smeeclient:
 endif
 
 # Note: keep the symlinks in /var/lib/zerotier-one to the binaries since these

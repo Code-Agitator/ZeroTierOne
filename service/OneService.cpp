@@ -92,7 +92,7 @@ namespace sdkresource = opentelemetry::v1::sdk::resource;
 #endif
 
 #if ZT_SSO_ENABLED
-#include <zeroidc.h>
+#include <rustybits.h>
 #endif
 
 #ifdef __WINDOWS__
@@ -334,8 +334,8 @@ class NetworkState {
 
 #if ZT_SSO_ENABLED
 		if (_idc) {
-			zeroidc::zeroidc_stop(_idc);
-			zeroidc::zeroidc_delete(_idc);
+			rustybits::zeroidc_stop(_idc);
+			rustybits::zeroidc_delete(_idc);
 			_idc = nullptr;
 		}
 #endif
@@ -433,7 +433,7 @@ class NetworkState {
 				assert(_config.centralAuthURL != nullptr);
 				assert(_config.ssoProvider != nullptr);
 
-				_idc = zeroidc::zeroidc_new(_config.issuerURL, _config.ssoClientID, _config.centralAuthURL, _config.ssoProvider, _webPort);
+				_idc = rustybits::zeroidc_new(_config.issuerURL, _config.ssoClientID, _config.centralAuthURL, _config.ssoProvider, _webPort);
 
 				if (_idc == nullptr) {
 					fprintf(stderr, "idc is null\n");
@@ -441,15 +441,15 @@ class NetworkState {
 				}
 			}
 
-			zeroidc::zeroidc_set_nonce_and_csrf(_idc, _config.ssoState, _config.ssoNonce);
+			rustybits::zeroidc_set_nonce_and_csrf(_idc, _config.ssoState, _config.ssoNonce);
 
-			char* url = zeroidc::zeroidc_get_auth_url(_idc);
+			char* url = rustybits::zeroidc_get_auth_url(_idc);
 			memcpy(_config.authenticationURL, url, strlen(url));
 			_config.authenticationURL[strlen(url)] = 0;
-			zeroidc::free_cstr(url);
+			rustybits::free_cstr(url);
 
-			if (zeroidc::zeroidc_is_running(_idc) && nwc->status == ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED) {
-				zeroidc::zeroidc_kick_refresh_thread(_idc);
+			if (rustybits::zeroidc_is_running(_idc) && nwc->status == ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED) {
+				rustybits::zeroidc_kick_refresh_thread(_idc);
 			}
 #endif
 		}
@@ -479,13 +479,13 @@ class NetworkState {
 			return ret;
 		}
 
-		ret = zeroidc::zeroidc_token_exchange(_idc, code);
-		zeroidc::zeroidc_set_nonce_and_csrf(_idc, _config.ssoState, _config.ssoNonce);
+		ret = rustybits::zeroidc_token_exchange(_idc, code);
+		rustybits::zeroidc_set_nonce_and_csrf(_idc, _config.ssoState, _config.ssoNonce);
 
-		char* url = zeroidc::zeroidc_get_auth_url(_idc);
+		char* url = rustybits::zeroidc_get_auth_url(_idc);
 		memcpy(_config.authenticationURL, url, strlen(url));
 		_config.authenticationURL[strlen(url)] = 0;
-		zeroidc::free_cstr(url);
+		rustybits::free_cstr(url);
 #endif
 		return ret;
 	}
@@ -497,7 +497,7 @@ class NetworkState {
 			fprintf(stderr, "idc is null\n");
 			return 0;
 		}
-		return zeroidc::zeroidc_get_exp_time(_idc);
+		return rustybits::zeroidc_get_exp_time(_idc);
 #else
 		return 0;
 #endif
@@ -511,7 +511,7 @@ class NetworkState {
 	std::map<InetAddress, SharedPtr<ManagedRoute> > _managedRoutes;
 	OneService::NetworkSettings _settings;
 #if ZT_SSO_ENABLED
-	zeroidc::ZeroIDC* _idc;
+	rustybits::ZeroIDC* _idc;
 #endif
 };
 
@@ -2536,13 +2536,13 @@ class OneServiceImpl : public OneService {
 
 			// SSO redirect handling
 			std::string state = req.get_param_value("state");
-			char* nwid = zeroidc::zeroidc_network_id_from_state(state.c_str());
+			char* nwid = rustybits::zeroidc_network_id_from_state(state.c_str());
 
 			outData["networkId"] = std::string(nwid);
 
 			const uint64_t id = Utils::hexStrToU64(nwid);
 
-			zeroidc::free_cstr(nwid);
+			rustybits::free_cstr(nwid);
 
 			Mutex::Lock l(_nets_m);
 			if (_nets.find(id) != _nets.end()) {
@@ -2574,7 +2574,7 @@ class OneServiceImpl : public OneService {
 					res.status = 500;
 				}
 
-				zeroidc::free_cstr(ret);
+				rustybits::free_cstr(ret);
 			}
 		};
 		_controlPlane.Get(ssoPath, ssoGet);

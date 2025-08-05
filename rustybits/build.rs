@@ -1,6 +1,6 @@
 extern crate cbindgen;
 
-use cbindgen::{Config, Language};
+use cbindgen::{Config, Language, MacroExpansionConfig};
 use std::env;
 use std::path::PathBuf;
 
@@ -10,10 +10,13 @@ fn main() {
     let package_name = env::var("CARGO_PKG_NAME").unwrap();
     let output_file = target_dir().join(format!("{package_name}.h")).display().to_string();
 
+    let meconfig = MacroExpansionConfig { bitflags: true, ..Default::default() };
+
     let config = Config {
         language: Language::C,
         cpp_compat: true,
-        namespace: Some(String::from("smeeclient")),
+        namespace: Some(String::from("rustybits")),
+        macro_expansion: meconfig,
         ..Default::default()
     };
 
@@ -29,8 +32,6 @@ fn target_dir() -> PathBuf {
     if let Ok(target) = env::var("CARGO_TARGET_DIR") {
         PathBuf::from(target)
     } else {
-        PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
-            .join("..")
-            .join("target")
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("target")
     }
 }

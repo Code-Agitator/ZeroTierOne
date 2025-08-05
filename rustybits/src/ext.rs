@@ -14,14 +14,18 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use url::Url;
 
-use crate::ZeroIDC;
+#[cfg(feature = "zeroidc")]
+use crate::zeroidc::ZeroIDC;
 
-#[cfg(any(
-    all(target_os = "linux", target_arch = "x86"),
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "linux", target_arch = "aarch64"),
-    target_os = "windows",
-    target_os = "macos",
+#[cfg(all(
+    feature = "zeroidc",
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
 ))]
 #[no_mangle]
 pub unsafe extern "C" fn zeroidc_new(
@@ -70,12 +74,15 @@ pub unsafe extern "C" fn zeroidc_new(
     }
 }
 
-#[cfg(any(
-    all(target_os = "linux", target_arch = "x86"),
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "linux", target_arch = "aarch64"),
-    target_os = "windows",
-    target_os = "macos",
+#[cfg(all(
+    feature = "zeroidc",
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
 ))]
 #[no_mangle]
 pub unsafe extern "C" fn zeroidc_delete(ptr: *mut ZeroIDC) {
@@ -93,12 +100,15 @@ pub unsafe extern "C" fn zeroidc_delete(ptr: *mut ZeroIDC) {
     }
 }
 
-#[cfg(any(
-    all(target_os = "linux", target_arch = "x86"),
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "linux", target_arch = "aarch64"),
-    target_os = "windows",
-    target_os = "macos",
+#[cfg(all(
+    feature = "zeroidc",
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
 ))]
 #[no_mangle]
 pub unsafe extern "C" fn zeroidc_start(ptr: *mut ZeroIDC) {
@@ -109,12 +119,15 @@ pub unsafe extern "C" fn zeroidc_start(ptr: *mut ZeroIDC) {
     idc.start();
 }
 
-#[cfg(any(
-    all(target_os = "linux", target_arch = "x86"),
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "linux", target_arch = "aarch64"),
-    target_os = "windows",
-    target_os = "macos",
+#[cfg(all(
+    feature = "zeroidc",
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
 ))]
 #[no_mangle]
 pub unsafe extern "C" fn zeroidc_stop(ptr: *mut ZeroIDC) {
@@ -125,12 +138,15 @@ pub unsafe extern "C" fn zeroidc_stop(ptr: *mut ZeroIDC) {
     idc.stop();
 }
 
-#[cfg(any(
-    all(target_os = "linux", target_arch = "x86"),
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "linux", target_arch = "aarch64"),
-    target_os = "windows",
-    target_os = "macos",
+#[cfg(all(
+    feature = "zeroidc",
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
 ))]
 #[no_mangle]
 pub unsafe extern "C" fn zeroidc_is_running(ptr: *mut ZeroIDC) -> bool {
@@ -142,6 +158,16 @@ pub unsafe extern "C" fn zeroidc_is_running(ptr: *mut ZeroIDC) -> bool {
     idc.is_running()
 }
 
+#[cfg(all(
+    feature = "zeroidc",
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+))]
 #[no_mangle]
 pub unsafe extern "C" fn zeroidc_get_exp_time(ptr: *mut ZeroIDC) -> u64 {
     let id = unsafe {
@@ -152,12 +178,15 @@ pub unsafe extern "C" fn zeroidc_get_exp_time(ptr: *mut ZeroIDC) -> u64 {
     id.get_exp_time()
 }
 
-#[cfg(any(
-    all(target_os = "linux", target_arch = "x86"),
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "linux", target_arch = "aarch64"),
-    target_os = "windows",
-    target_os = "macos",
+#[cfg(all(
+    feature = "zeroidc",
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
 ))]
 #[no_mangle]
 pub unsafe extern "C" fn zeroidc_set_nonce_and_csrf(
@@ -186,12 +215,15 @@ pub unsafe extern "C" fn zeroidc_set_nonce_and_csrf(
     idc.set_nonce_and_csrf(csrf_token, nonce);
 }
 
-#[cfg(any(
-    all(target_os = "linux", target_arch = "x86"),
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "linux", target_arch = "aarch64"),
-    target_os = "windows",
-    target_os = "macos",
+#[cfg(all(
+    feature = "zeroidc",
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
 ))]
 #[no_mangle]
 pub unsafe extern "C" fn free_cstr(s: *mut c_char) {
@@ -205,12 +237,15 @@ pub unsafe extern "C" fn free_cstr(s: *mut c_char) {
     }
 }
 
-#[cfg(any(
-    all(target_os = "linux", target_arch = "x86"),
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "linux", target_arch = "aarch64"),
-    target_os = "windows",
-    target_os = "macos",
+#[cfg(all(
+    feature = "zeroidc",
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
 ))]
 #[no_mangle]
 pub unsafe extern "C" fn zeroidc_get_auth_url(ptr: *mut ZeroIDC) -> *mut c_char {
@@ -224,12 +259,15 @@ pub unsafe extern "C" fn zeroidc_get_auth_url(ptr: *mut ZeroIDC) -> *mut c_char 
     s.into_raw()
 }
 
-#[cfg(any(
-    all(target_os = "linux", target_arch = "x86"),
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "linux", target_arch = "aarch64"),
-    target_os = "windows",
-    target_os = "macos",
+#[cfg(all(
+    feature = "zeroidc",
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
 ))]
 #[no_mangle]
 pub unsafe extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char) -> *mut c_char {
@@ -314,12 +352,15 @@ pub unsafe extern "C" fn zeroidc_network_id_from_state(state: *const c_char) -> 
     s.into_raw()
 }
 
-#[cfg(any(
-    all(target_os = "linux", target_arch = "x86"),
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "linux", target_arch = "aarch64"),
-    target_os = "windows",
-    target_os = "macos",
+#[cfg(all(
+    feature = "zeroidc",
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
 ))]
 #[no_mangle]
 pub unsafe extern "C" fn zeroidc_kick_refresh_thread(idc: *mut ZeroIDC) {
@@ -330,4 +371,87 @@ pub unsafe extern "C" fn zeroidc_kick_refresh_thread(idc: *mut ZeroIDC) {
     let idc = unsafe { &mut *idc };
 
     idc.kick_refresh_thread();
+}
+
+#[cfg(feature = "ztcontroller")]
+use crate::smeeclient::NetworkJoinedParams;
+#[cfg(feature = "ztcontroller")]
+use crate::smeeclient::SmeeClient;
+
+#[cfg(feature = "ztcontroller")]
+#[no_mangle]
+pub unsafe extern "C" fn smee_client_new(
+    temporal_url: *const c_char,
+    namespace: *const c_char,
+    task_queue: *const c_char,
+) -> *mut SmeeClient {
+    let url = unsafe {
+        assert!(!temporal_url.is_null());
+        CStr::from_ptr(temporal_url).to_str().unwrap()
+    };
+
+    let ns = unsafe {
+        assert!(!namespace.is_null());
+        CStr::from_ptr(namespace).to_str().unwrap()
+    };
+
+    let tq = unsafe {
+        assert!(!task_queue.is_null());
+        CStr::from_ptr(task_queue).to_str().unwrap()
+    };
+
+    match SmeeClient::new(url, ns, tq) {
+        Ok(c) => Box::into_raw(Box::new(c)),
+        Err(e) => {
+            println!("error creating smee client instance: {}", e);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+#[cfg(feature = "ztcontroller")]
+#[no_mangle]
+pub unsafe extern "C" fn smee_client_delete(ptr: *mut SmeeClient) {
+    if ptr.is_null() {
+        return;
+    }
+    let smee = unsafe {
+        assert!(!ptr.is_null());
+        Box::from_raw(&mut *ptr)
+    };
+
+    smee.shutdown();
+}
+
+#[cfg(feature = "ztcontroller")]
+#[no_mangle]
+pub unsafe extern "C" fn smee_client_notify_network_joined(
+    smee_instance: *mut SmeeClient,
+    network_id: *const c_char,
+    member_id: *const c_char,
+) -> bool {
+    let nwid = unsafe {
+        assert!(!network_id.is_null());
+        CStr::from_ptr(network_id).to_str().unwrap()
+    };
+
+    let mem_id = unsafe {
+        assert!(!member_id.is_null());
+        CStr::from_ptr(member_id).to_str().unwrap()
+    };
+
+    let smee = unsafe {
+        assert!(!smee_instance.is_null());
+        &mut *smee_instance
+    };
+
+    let params = NetworkJoinedParams::new(nwid, mem_id);
+
+    match smee.notify_network_joined(params) {
+        Ok(()) => true,
+        Err(e) => {
+            println!("error notifying network joined: {0}", e);
+            false
+        }
+    }
 }

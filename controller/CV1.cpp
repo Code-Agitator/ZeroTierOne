@@ -27,7 +27,7 @@
 #include <climits>
 #include <iomanip>
 #include <libpq-fe.h>
-#include <smeeclient.h>
+#include <rustybits.h>
 #include <sstream>
 
 // #define REDIS_TRACE 1
@@ -153,7 +153,7 @@ CV1::CV1(const Identity& myId, const char* path, int listenPort, RedisConfig* rc
 CV1::~CV1()
 {
 	if (_smee != NULL) {
-		smeeclient::smee_client_delete(_smee);
+		rustybits::smee_client_delete(_smee);
 		_smee = NULL;
 	}
 
@@ -195,7 +195,7 @@ void CV1::configureSmee()
 	if (scheme != NULL && host != NULL && port != NULL && ns != NULL && task_queue != NULL) {
 		fprintf(stderr, "creating smee client\n");
 		std::string hostPort = std::string(scheme) + std::string("://") + std::string(host) + std::string(":") + std::string(port);
-		this->_smee = smeeclient::smee_client_new(hostPort.c_str(), ns, task_queue);
+		this->_smee = rustybits::smee_client_new(hostPort.c_str(), ns, task_queue);
 	}
 	else {
 		fprintf(stderr, "Smee client not configured\n");
@@ -1850,7 +1850,7 @@ void CV1::notifyNewMember(const std::string& networkID, const std::string& membe
 	auto span = tracer->StartSpan("cv1::notifyNewMember");
 	auto scope = tracer->WithActiveSpan(span);
 
-	smeeclient::smee_client_notify_network_joined(_smee, networkID.c_str(), memberID.c_str());
+	rustybits::smee_client_notify_network_joined(_smee, networkID.c_str(), memberID.c_str());
 }
 
 void CV1::onlineNotificationThread()

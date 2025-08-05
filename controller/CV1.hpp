@@ -28,7 +28,7 @@
 #include <pqxx/pqxx>
 #include <redis++/redis++.h>
 
-namespace smeeclient {
+namespace rustybits {
 struct SmeeClient;
 }
 
@@ -134,7 +134,7 @@ class CV1 : public DB {
 	std::shared_ptr<sw::redis::RedisCluster> _cluster;
 	bool _redisMemberStatus;
 
-	smeeclient::SmeeClient* _smee;
+	rustybits::SmeeClient* _smee;
 };
 
 }	// namespace ZeroTier

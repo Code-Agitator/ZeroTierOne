@@ -17,7 +17,6 @@
 )]
 
 pub mod error;
-pub mod ext;
 
 extern crate base64;
 extern crate bytes;
@@ -25,7 +24,7 @@ extern crate openidconnect;
 extern crate time;
 extern crate url;
 
-use crate::error::*;
+use crate::zeroidc::error::*;
 
 use bytes::Bytes;
 use jwt::Token;
@@ -166,12 +165,12 @@ impl ZeroIDC {
         Ok(idc)
     }
 
-    fn kick_refresh_thread(&mut self) {
+    pub fn kick_refresh_thread(&mut self) {
         let local = Arc::clone(&self.inner);
         local.lock().unwrap().kick = true;
     }
 
-    fn start(&mut self) {
+    pub fn start(&mut self) {
         let local = Arc::clone(&self.inner);
 
         if !local.lock().unwrap().running {

@@ -1,3 +1,4 @@
+#![cfg(feature = "ztcontroller")]
 /*
  * Copyright (c)2023 ZeroTier, Inc.
  *
@@ -9,8 +10,6 @@
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
  */
-
-pub mod ext;
 
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -37,7 +36,7 @@ pub struct NetworkJoinedParams {
 }
 
 impl NetworkJoinedParams {
-    fn new(network_id: &str, member_id: &str) -> Self {
+    pub fn new(network_id: &str, member_id: &str) -> Self {
         Self {
             network_id: network_id.to_string(),
             member_id: member_id.to_string(),
