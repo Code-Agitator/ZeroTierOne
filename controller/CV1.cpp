@@ -1406,7 +1406,7 @@ void CV1::commitThread()
 {
 	fprintf(stderr, "%s: commitThread start\n", _myAddressStr.c_str());
 	std::pair<nlohmann::json, bool> qitem;
-	while (_commitQueue.get(qitem) & (_run == 1)) {
+	while (_commitQueue.get(qitem) && (_run == 1)) {
 		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 		auto tracer = provider->GetTracer("cv1");
 		auto span = tracer->StartSpan("cv1::commitThread");
@@ -1933,9 +1933,16 @@ void CV1::onlineNotification_Postgres()
 				std::string ipAddr = i->second.physicalAddress.toIpString(ipTmp);
 				std::string timestamp = std::to_string(ts);
 				std::string osArch = i->second.osArch;
+				std::vector<std::string> osArchSplit = split(osArch, '/');
+				std::string os = "unknown";
+				std::string arch = "unknown";
+				if (osArchSplit.size() == 2) {
+					os = osArchSplit[0];
+					arch = osArchSplit[1];
+				}
 
 				std::stringstream memberUpdate;
-				memberUpdate << "INSERT INTO ztc_member_status (network_id, member_id, address, last_updated) VALUES "
+				memberUpdate << "INSERT INTO ztc_member_status (network_id, member_id, address, last_updated, os, arch) VALUES "
 							 << "('" << networkId << "', '" << memberId << "', ";
 				if (ipAddr.empty()) {
 					memberUpdate << "NULL, ";
@@ -1943,8 +1950,12 @@ void CV1::onlineNotification_Postgres()
 				else {
 					memberUpdate << "'" << ipAddr << "', ";
 				}
-				memberUpdate << "TO_TIMESTAMP(" << timestamp << "::double precision/1000)) "
-							 << " ON CONFLICT (network_id, member_id) DO UPDATE SET address = EXCLUDED.address, last_updated = EXCLUDED.last_updated";
+				memberUpdate << "TO_TIMESTAMP(" << timestamp << "::double precision/1000), "
+							 << "'" << os << "', "
+							 << "'" << arch << "'"
+							 << ") "
+							 << " ON CONFLICT (network_id, member_id) DO UPDATE SET address = EXCLUDED.address, last_updated = EXCLUDED.last_updated, "
+							 << "os = EXCLUDED.os, arch = EXCLUDED.arch";
 
 				pipe.insert(memberUpdate.str());
 				Metrics::pgsql_node_checkin++;
@@ -2056,8 +2067,15 @@ uint64_t CV1::_doRedisUpdate(sw::redis::Transaction& tx, std::string& controller
 		std::string ipAddr = i->second.physicalAddress.toIpString(ipTmp);
 		std::string timestamp = std::to_string(ts);
 		std::string osArch = i->second.osArch;
+		std::vector<std::string> osArchSplit = split(osArch, '/');
+		std::string os = "unknown";
+		std::string arch = "unknown";
+		if (osArchSplit.size() == 2) {
+			os = osArchSplit[0];
+			arch = osArchSplit[1];
+		}
 
-		std::unordered_map<std::string, std::string> record = { { "id", memberId }, { "address", ipAddr }, { "last_updated", std::to_string(ts) } };
+		std::unordered_map<std::string, std::string> record = { { "id", memberId }, { "address", ipAddr }, { "last_updated", std::to_string(ts) }, { "os", os }, { "arch", arch } };
 		tx.zadd("nodes-online:{" + controllerId + "}", memberId, ts)
 			.zadd("nodes-online2:{" + controllerId + "}", networkId + "-" + memberId, ts)
 			.zadd("network-nodes-online:{" + controllerId + "}:" + networkId, memberId, ts)
