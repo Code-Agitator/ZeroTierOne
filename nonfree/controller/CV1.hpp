@@ -43,6 +43,9 @@ struct RedisConfig;
  * but be aware that we might change it at any time.
  */
 class CV1 : public DB {
+	friend class MemberNotificationReceiver<CV1>;
+	friend class NetworkNotificationReceiver<CV1>;
+
   public:
 	CV1(const Identity& myId, const char* path, int listenPort, RedisConfig* rc);
 	virtual ~CV1();

@@ -31,6 +31,9 @@
 namespace ZeroTier {
 
 class CV2 : public DB {
+	friend class MemberNotificationReceiver<CV2>;
+	friend class NetworkNotificationReceiver<CV2>;
+
   public:
 	CV2(const Identity& myId, const char* path, int listenPort);
 	virtual ~CV2();
@@ -56,15 +59,9 @@ class CV2 : public DB {
 			return (std::size_t)(p.first ^ p.second);
 		}
 	};
-	virtual void _memberChanged(nlohmann::json& old, nlohmann::json& memberConfig, bool notifyListeners)
-	{
-		DB::_memberChanged(old, memberConfig, notifyListeners);
-	}
+	virtual void _memberChanged(nlohmann::json& old, nlohmann::json& memberConfig, bool notifyListeners);
 
-	virtual void _networkChanged(nlohmann::json& old, nlohmann::json& networkConfig, bool notifyListeners)
-	{
-		DB::_networkChanged(old, networkConfig, notifyListeners);
-	}
+	virtual void _networkChanged(nlohmann::json& old, nlohmann::json& networkConfig, bool notifyListeners);
 
   private:
 	void initializeNetworks();

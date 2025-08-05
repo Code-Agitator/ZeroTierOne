@@ -21,7 +21,6 @@
 #include "Credential.hpp"
 #include "ECC.hpp"
 #include "Identity.hpp"
-#include "Utils.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>

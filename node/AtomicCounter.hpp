@@ -14,8 +14,6 @@
 #ifndef ZT_ATOMICCOUNTER_HPP
 #define ZT_ATOMICCOUNTER_HPP
 
-#include "Constants.hpp"
-
 #ifndef __GNUC__
 #include <atomic>
 #endif

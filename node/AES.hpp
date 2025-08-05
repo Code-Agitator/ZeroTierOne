@@ -15,7 +15,6 @@
 #define ZT_AES_HPP
 
 #include "Constants.hpp"
-#include "SHA512.hpp"
 #include "Utils.hpp"
 
 // Uncomment to disable all hardware acceleration (usually for testing)

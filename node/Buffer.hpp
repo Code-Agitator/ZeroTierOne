@@ -18,11 +18,8 @@
 #include "Utils.hpp"
 
 #include <algorithm>
-#include <stdexcept>
 #include <stdint.h>
 #include <string.h>
-#include <string>
-#include <utility>
 
 #if defined(__GNUC__) && (! defined(ZT_NO_TYPE_PUNNING))
 #define ZT_VAR_MAY_ALIAS __attribute__((__may_alias__))

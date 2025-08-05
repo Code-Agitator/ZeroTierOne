@@ -61,10 +61,6 @@ struct AuthInfo {
  * Base class with common infrastructure for all controller DB implementations
  */
 class DB {
-#ifdef ZT_CONTROLLER_USE_LIBPQ
-	friend class MemberNotificationReceiver;
-	friend class NetworkNotificationReceiver;
-#endif
   public:
 	class ChangeListener {
 	  public:

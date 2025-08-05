@@ -19,7 +19,6 @@
 #ifdef __UNIX_LIKE__
 
 #include <pthread.h>
-#include <stdint.h>
 #include <stdlib.h>
 
 namespace ZeroTier {

@@ -83,6 +83,10 @@ echo "{
         \"lowBandwidthMode\": ${ZT_LB_MODE:-$DEFAULT_LB_MODE},
         \"ssoRedirectURL\": \"${ZT_SSO_REDIRECT_URL}\",
         \"allowManagementFrom\": [\"127.0.0.1\", \"::1\", \"10.0.0.0/8\"],
+        \"otel\": {
+            \"exporterEndpoint\": \"${ZT_EXPORTER_ENDPOINT}\",
+            \"exporterSampleRate\": ${ZT_EXPORTER_SAMPLE_RATE:-0}
+        },
         ${REDIS}
     }
 }    

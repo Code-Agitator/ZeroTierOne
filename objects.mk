@@ -40,7 +40,6 @@ ONE_OBJS=\
 	nonfree/controller/FileDB.o \
 	nonfree/controller/LFDB.o \
 	nonfree/controller/CtlUtil.o \
-	nonfree/controller/PostgreSQL.o \
 	nonfree/controller/CV1.o \
 	nonfree/controller/CV2.o \
 	osdep/EthernetTap.o \
@@ -48,4 +47,3 @@ ONE_OBJS=\
 	osdep/Http.o \
 	service/SoftwareUpdater.o \
 	service/OneService.o
-

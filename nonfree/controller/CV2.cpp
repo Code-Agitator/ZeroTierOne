@@ -20,6 +20,7 @@
 #include "../version.h"
 #include "CtlUtil.hpp"
 #include "EmbeddedNetworkController.hpp"
+#include "opentelemetry/trace/provider.h"
 
 #include <chrono>
 #include <climits>
@@ -37,6 +38,11 @@ using namespace ZeroTier;
 
 CV2::CV2(const Identity& myId, const char* path, int listenPort) : DB(), _pool(), _myId(myId), _myAddress(myId.address()), _ready(0), _connected(1), _run(1), _waitNoticePrinted(false), _listenPort(listenPort)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("cv2");
+	auto span = tracer->StartSpan("cv2::CV2");
+	auto scope = tracer->WithActiveSpan(span);
+
 	fprintf(stderr, "CV2::CV2\n");
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
@@ -104,8 +110,23 @@ bool CV2::isReady()
 	return (_ready == 2) && _connected;
 }
 
+void CV2::_memberChanged(nlohmann::json& old, nlohmann::json& memberConfig, bool notifyListeners)
+{
+	DB::_memberChanged(old, memberConfig, notifyListeners);
+}
+
+void CV2::_networkChanged(nlohmann::json& old, nlohmann::json& networkConfig, bool notifyListeners)
+{
+	DB::_networkChanged(old, networkConfig, notifyListeners);
+}
+
 bool CV2::save(nlohmann::json& record, bool notifyListeners)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("cv2");
+	auto span = tracer->StartSpan("cv2::save");
+	auto scope = tracer->WithActiveSpan(span);
+
 	bool modified = false;
 	try {
 		if (! record.is_object()) {
@@ -114,6 +135,9 @@ bool CV2::save(nlohmann::json& record, bool notifyListeners)
 		}
 		const std::string objtype = record["objtype"];
 		if (objtype == "network") {
+			auto nspan = tracer->StartSpan("cv2::save::network");
+			auto nscope = tracer->WithActiveSpan(nspan);
+
 			// fprintf(stderr, "network save\n");
 			const uint64_t nwid = OSUtils::jsonIntHex(record["id"], 0ULL);
 			if (nwid) {
@@ -127,6 +151,9 @@ bool CV2::save(nlohmann::json& record, bool notifyListeners)
 			}
 		}
 		else if (objtype == "member") {
+			auto mspan = tracer->StartSpan("cv2::save::member");
+			auto mscope = tracer->WithActiveSpan(mspan);
+
 			std::string networkId = record["nwid"];
 			std::string memberId = record["id"];
 			const uint64_t nwid = OSUtils::jsonIntHex(record["nwid"], 0ULL);
@@ -161,21 +188,36 @@ bool CV2::save(nlohmann::json& record, bool notifyListeners)
 
 void CV2::eraseNetwork(const uint64_t networkId)
 {
-	fprintf(stderr, "PostgreSQL::eraseNetwork\n");
-	char tmp2[24];
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("cv2");
+	auto span = tracer->StartSpan("cv2::eraseNetwork");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	std::string nwid = Utils::hex(networkId, networkIdStr);
+	span->SetAttribute("network_id", nwid);
+
+	fprintf(stderr, "CV2::eraseNetwork\n");
 	waitForReady();
-	Utils::hex(networkId, tmp2);
 	std::pair<nlohmann::json, bool> tmp;
-	tmp.first["id"] = tmp2;
+	tmp.first["id"] = nwid;
 	tmp.first["objtype"] = "_delete_network";
 	tmp.second = true;
 	_commitQueue.post(tmp);
-	nlohmann::json nullJson;
-	_networkChanged(tmp.first, nullJson, true);
+	// nlohmann::json nullJson;
+	//_networkChanged(tmp.first, nullJson, isReady());
 }
 
 void CV2::eraseMember(const uint64_t networkId, const uint64_t memberId)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("cv2");
+	auto span = tracer->StartSpan("cv2::eraseMember");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	char memberIdStr[11];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
+
 	fprintf(stderr, "PostgreSQL::eraseMember\n");
 	char tmp2[24];
 	waitForReady();
@@ -187,12 +229,24 @@ void CV2::eraseMember(const uint64_t networkId, const uint64_t memberId)
 	tmp.first["objtype"] = "_delete_member";
 	tmp.second = true;
 	_commitQueue.post(tmp);
-	nlohmann::json nullJson;
-	_memberChanged(tmp.first, nullJson, true);
+	// nlohmann::json nullJson;
+	//_memberChanged(tmp.first, nullJson, isReady());
 }
 
 void CV2::nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress& physicalAddress, const char* osArch)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("cv2");
+	auto span = tracer->StartSpan("cv2::nodeIsOnline");
+	auto scope = tracer->WithActiveSpan(span);
+	char networkIdStr[17];
+	char memberIdStr[11];
+	char ipAddressStr[INET6_ADDRSTRLEN];
+	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
+	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
+	span->SetAttribute("physical_address", ipAddressStr);
+	span->SetAttribute("os_arch", osArch);
+
 	std::lock_guard<std::mutex> l(_lastOnline_l);
 	NodeOnlineRecord& i = _lastOnline[std::pair<uint64_t, uint64_t>(networkId, memberId)];
 	i.lastSeen = OSUtils::now();
@@ -210,6 +264,10 @@ void CV2::nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const 
 AuthInfo CV2::getSSOAuthInfo(const nlohmann::json& member, const std::string& redirectURL)
 {
 	// TODO: Redo this for CV2
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("cv2");
+	auto span = tracer->StartSpan("cv2::getSSOAuthInfo");
+	auto scope = tracer->WithActiveSpan(span);
 
 	Metrics::db_get_sso_info++;
 	// NONCE is just a random character string.  no semantic meaning
@@ -365,6 +423,7 @@ AuthInfo CV2::getSSOAuthInfo(const nlohmann::json& member, const std::string& re
 	}
 	catch (std::exception& e) {
 		fprintf(stderr, "ERROR: Error updating member on load for network %s: %s\n", networkId.c_str(), e.what());
+		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
 	}
 
 	return info;   // std::string(authenticationURL);
@@ -372,6 +431,11 @@ AuthInfo CV2::getSSOAuthInfo(const nlohmann::json& member, const std::string& re
 
 void CV2::initializeNetworks()
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("cv2");
+	auto span = tracer->StartSpan("cv2::initializeNetworks");
+	auto scope = tracer->WithActiveSpan(span);
+
 	fprintf(stderr, "Initializing networks...\n");
 
 	try {
@@ -494,6 +558,7 @@ void CV2::initializeNetworks()
 	}
 	catch (std::exception& e) {
 		fprintf(stderr, "ERROR: Error initializing networks: %s\n", e.what());
+		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
 		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 		exit(-1);
 	}
@@ -501,6 +566,11 @@ void CV2::initializeNetworks()
 
 void CV2::initializeMembers()
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("cv2");
+	auto span = tracer->StartSpan("cv2::initializeMembers");
+	auto scope = tracer->WithActiveSpan(span);
+
 	std::string memberId;
 	std::string networkId;
 	try {
@@ -647,6 +717,7 @@ void CV2::initializeMembers()
 	}
 	catch (std::exception& e) {
 		fprintf(stderr, "ERROR: Error initializing member: %s-%s %s\n", networkId.c_str(), memberId.c_str(), e.what());
+		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
 		exit(-1);
 	}
 }
@@ -672,6 +743,11 @@ void CV2::heartbeat()
 	const char* hostname = hostnameTmp;
 
 	while (_run == 1) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("cv2");
+		auto span = tracer->StartSpan("cv2::heartbeat");
+		auto scope = tracer->WithActiveSpan(span);
+
 		auto c = _pool->borrow();
 		int64_t ts = OSUtils::now();
 
@@ -698,15 +774,18 @@ void CV2::heartbeat()
 			}
 			catch (std::exception& e) {
 				fprintf(stderr, "ERROR: Error in heartbeat: %s\n", e.what());
+				span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
 				continue;
 			}
 			catch (...) {
 				fprintf(stderr, "ERROR: Unknown error in heartbeat\n");
+				span->SetStatus(opentelemetry::trace::StatusCode::kError, "Unknown error in heartbeat");
 				continue;
 			}
 		}
 
 		_pool->unborrow(c);
+		span->End();
 
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
@@ -720,7 +799,7 @@ void CV2::membersDbWatcher()
 	std::string stream = "member_" + _myAddressStr;
 
 	fprintf(stderr, "Listening to member stream: %s\n", stream.c_str());
-	MemberNotificationReceiver m(this, *c->c, stream);
+	MemberNotificationReceiver<CV2> m(this, *c->c, stream);
 
 	while (_run == 1) {
 		c->c->await_notification(5, 0);
@@ -739,7 +818,7 @@ void CV2::networksDbWatcher()
 
 	auto c = _pool->borrow();
 
-	NetworkNotificationReceiver n(this, *c->c, stream);
+	NetworkNotificationReceiver<CV2> n(this, *c->c, stream);
 
 	while (_run == 1) {
 		c->c->await_notification(5, 0);
@@ -754,6 +833,11 @@ void CV2::commitThread()
 	fprintf(stderr, "%s: commitThread start\n", _myAddressStr.c_str());
 	std::pair<nlohmann::json, bool> qitem;
 	while (_commitQueue.get(qitem) && (_run == 1)) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("cv2");
+		auto span = tracer->StartSpan("cv2::commitThread");
+		auto scope = tracer->WithActiveSpan(span);
+
 		// fprintf(stderr, "commitThread tick\n");
 		if (! qitem.first.is_object()) {
 			fprintf(stderr, "not an object\n");
@@ -779,6 +863,9 @@ void CV2::commitThread()
 			nlohmann::json& config = (qitem.first);
 			const std::string objtype = config["objtype"];
 			if (objtype == "member") {
+				auto mspan = tracer->StartSpan("cv2::commitThread::member");
+				auto mscope = tracer->WithActiveSpan(span);
+
 				// fprintf(stderr, "%s: commitThread: member\n", _myAddressStr.c_str());
 				std::string memberId;
 				std::string networkId;
@@ -896,13 +983,22 @@ void CV2::commitThread()
 					if (s) {
 						fprintf(stderr, "%s ERROR: SQL error: %s\n", _myAddressStr.c_str(), s->query().c_str());
 					}
+					mspan->SetStatus(opentelemetry::trace::StatusCode::kError, "pqxx::data_exception");
+					mspan->SetAttribute("error", e.what());
+					mspan->SetAttribute("config", cfgDump);
 				}
 				catch (std::exception& e) {
 					std::string cfgDump = OSUtils::jsonDump(config, 2);
 					fprintf(stderr, "%s ERROR: Error updating member %s-%s: %s\njsonDump: %s\n", _myAddressStr.c_str(), networkId.c_str(), memberId.c_str(), e.what(), cfgDump.c_str());
+					mspan->SetStatus(opentelemetry::trace::StatusCode::kError, "std::exception");
+					mspan->SetAttribute("error", e.what());
+					mspan->SetAttribute("config", cfgDump);
 				}
 			}
 			else if (objtype == "network") {
+				auto nspan = tracer->StartSpan("cv2::commitThread::network");
+				auto nscope = tracer->WithActiveSpan(span);
+
 				try {
 					// fprintf(stderr, "%s: commitThread: network\n", _myAddressStr.c_str());
 					pqxx::work w(*c->c);
@@ -942,29 +1038,48 @@ void CV2::commitThread()
 					if (s) {
 						fprintf(stderr, "%s ERROR: SQL error: %s\n", _myAddressStr.c_str(), s->query().c_str());
 					}
+					nspan->SetStatus(opentelemetry::trace::StatusCode::kError, "pqxx::data_exception");
+					nspan->SetAttribute("error", e.what());
+					nspan->SetAttribute("config", OSUtils::jsonDump(config, 2));
 				}
 				catch (std::exception& e) {
 					fprintf(stderr, "%s ERROR: Error updating network: %s\n", _myAddressStr.c_str(), e.what());
+					nspan->SetStatus(opentelemetry::trace::StatusCode::kError, "std::exception");
+					nspan->SetAttribute("error", e.what());
+					nspan->SetAttribute("config", OSUtils::jsonDump(config, 2));
 				}
 			}
 			else if (objtype == "_delete_network") {
+				auto dspan = tracer->StartSpan("cv2::commitThread::delete_network");
+				auto dscope = tracer->WithActiveSpan(span);
+
 				// fprintf(stderr, "%s: commitThread: delete network\n", _myAddressStr.c_str());
 				try {
-					// don't think we need this. Deletion handled by CV2 API
-
 					pqxx::work w(*c->c);
 					std::string networkId = config["id"];
-
+					fprintf(stderr, "Deleting network %s\n", networkId.c_str());
 					w.exec_params0("DELETE FROM network_memberships_ctl WHERE network_id = $1", networkId);
 					w.exec_params0("DELETE FROM networks_ctl WHERE id = $1", networkId);
 
 					w.commit();
+
+					uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
+					json oldConfig;
+					get(nwidInt, oldConfig);
+					json empty;
+					_networkChanged(oldConfig, empty, qitem.second);
 				}
 				catch (std::exception& e) {
 					fprintf(stderr, "%s ERROR: Error deleting network: %s\n", _myAddressStr.c_str(), e.what());
+					dspan->SetStatus(opentelemetry::trace::StatusCode::kError, "std::exception");
+					dspan->SetAttribute("error", e.what());
+					dspan->SetAttribute("config", OSUtils::jsonDump(config, 2));
 				}
 			}
 			else if (objtype == "_delete_member") {
+				auto dspan = tracer->StartSpan("cv2::commitThread::delete_member");
+				auto dscope = tracer->WithActiveSpan(span);
+
 				// fprintf(stderr, "%s commitThread: delete member\n", _myAddressStr.c_str());
 				try {
 					pqxx::work w(*c->c);
@@ -975,9 +1090,22 @@ void CV2::commitThread()
 					pqxx::result res = w.exec_params0("DELETE FROM network_memberships_ctl WHERE device_id = $1 AND network_id = $2", memberId, networkId);
 
 					w.commit();
+
+					uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
+					uint64_t memberidInt = OSUtils::jsonIntHex(config["id"], 0ULL);
+
+					nlohmann::json networkConfig;
+					nlohmann::json oldConfig;
+
+					get(nwidInt, networkConfig, memberidInt, oldConfig);
+					json empty;
+					_memberChanged(oldConfig, empty, qitem.second);
 				}
 				catch (std::exception& e) {
 					fprintf(stderr, "%s ERROR: Error deleting member: %s\n", _myAddressStr.c_str(), e.what());
+					dspan->SetStatus(opentelemetry::trace::StatusCode::kError, "std::exception");
+					dspan->SetAttribute("error", e.what());
+					dspan->SetAttribute("config", OSUtils::jsonDump(config, 2));
 				}
 			}
 			else {
@@ -986,6 +1114,8 @@ void CV2::commitThread()
 		}
 		catch (std::exception& e) {
 			fprintf(stderr, "%s ERROR: Error getting objtype: %s\n", _myAddressStr.c_str(), e.what());
+			span->SetStatus(opentelemetry::trace::StatusCode::kError, "std::exception");
+			span->SetAttribute("error", e.what());
 		}
 		_pool->unborrow(c);
 		c.reset();
@@ -1002,6 +1132,11 @@ void CV2::onlineNotificationThread()
 
 	nlohmann::json jtmp1, jtmp2;
 	while (_run == 1) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("cv2");
+		auto span = tracer->StartSpan("cv2::onlineNotificationThread");
+		auto scope = tracer->WithActiveSpan(span);
+
 		auto c = _pool->borrow();
 		auto c2 = _pool->borrow();
 
@@ -1086,12 +1221,17 @@ void CV2::onlineNotificationThread()
 		}
 		catch (std::exception& e) {
 			fprintf(stderr, "%s ERROR: Error in onlineNotificationThread: %s\n", _myAddressStr.c_str(), e.what());
+			span->SetStatus(opentelemetry::trace::StatusCode::kError, "std::exception");
+			span->SetAttribute("error", e.what());
 		}
 		catch (...) {
 			fprintf(stderr, "%s ERROR: Unknown error in onlineNotificationThread\n", _myAddressStr.c_str());
+			span->SetStatus(opentelemetry::trace::StatusCode::kError, "unknown");
 		}
 		_pool->unborrow(c2);
 		_pool->unborrow(c);
+		span->End();
+
 		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
 

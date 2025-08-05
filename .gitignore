@@ -61,6 +61,7 @@ zt1-src.tar.gz
 /MacEthernetTapAgent
 
 # Miscellaneous temporaries, build files, etc.
+ext/installfiles/windows/*.back*.aip
 tcp-proxy/tcp-proxy
 rustybits/target
 *.log
