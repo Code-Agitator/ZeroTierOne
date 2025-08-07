@@ -26,6 +26,7 @@
 #include <climits>
 #include <iomanip>
 #include <libpq-fe.h>
+#include <rustybits.h>
 #include <sstream>
 
 using json = nlohmann::json;
@@ -42,6 +43,8 @@ CV2::CV2(const Identity& myId, const char* path, int listenPort) : DB(), _pool()
 	auto tracer = provider->GetTracer("cv2");
 	auto span = tracer->StartSpan("cv2::CV2");
 	auto scope = tracer->WithActiveSpan(span);
+
+	rustybits::init_async_runtime();
 
 	fprintf(stderr, "CV2::CV2\n");
 	char myAddress[64];
@@ -83,6 +86,8 @@ CV2::CV2(const Identity& myId, const char* path, int listenPort) : DB(), _pool()
 
 CV2::~CV2()
 {
+	rustybits::shutdown_async_runtime();
+
 	_run = 0;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 

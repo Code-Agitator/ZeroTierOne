@@ -17,6 +17,7 @@ use temporal_sdk_core_protos::{
     coresdk::AsJsonPayloadExt,
     temporal::api::enums::v1::{WorkflowIdConflictPolicy, WorkflowIdReusePolicy},
 };
+use tokio::runtime::{Handle, Runtime};
 use url::Url;
 use uuid::Uuid;
 
@@ -43,16 +44,13 @@ impl NetworkJoinedParams {
 }
 
 pub struct SmeeClient {
-    tokio_rt: tokio::runtime::Runtime,
     client: RetryClient<Client>,
     task_queue: String,
 }
 
 impl SmeeClient {
     pub fn new(temporal_url: &str, namespace: &str, task_queue: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        // start tokio runtime.  Required by temporal
-        let rt = tokio::runtime::Runtime::new()?;
-
+        let rt = Handle::current();
         let c = ClientOptionsBuilder::default()
             .target_url(Url::from_str(temporal_url).unwrap())
             .client_name(CLIENT_NAME)
@@ -61,11 +59,7 @@ impl SmeeClient {
 
         let con = rt.block_on(async { c.connect(namespace.to_string(), None).await })?;
 
-        Ok(Self {
-            tokio_rt: rt,
-            client: con,
-            task_queue: task_queue.to_string(),
-        })
+        Ok(Self { client: con, task_queue: task_queue.to_string() })
     }
 
     pub fn notify_network_joined(&self, params: NetworkJoinedParams) -> Result<(), Box<dyn std::error::Error>> {
@@ -89,7 +83,8 @@ impl SmeeClient {
 
         let workflow_id = Uuid::new_v4();
 
-        self.tokio_rt.block_on(async {
+        let rt = Handle::current();
+        rt.block_on(async {
             println!("calilng start_workflow");
             self.client
                 .start_workflow(
@@ -104,9 +99,5 @@ impl SmeeClient {
         })?;
 
         Ok(())
-    }
-
-    pub fn shutdown(self) {
-        self.tokio_rt.shutdown_timeout(Duration::from_secs(5))
     }
 }

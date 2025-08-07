@@ -14,6 +14,38 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use url::Url;
 
+static mut RT: Option<tokio::runtime::Runtime> = None;
+
+static START: std::sync::Once = std::sync::Once::new();
+static SHUTDOWN: std::sync::Once = std::sync::Once::new();
+
+#[no_mangle]
+pub unsafe extern "C" fn init_async_runtime() {
+    START.call_once(|| {
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(4)
+            .thread_name("rust-async-worker")
+            .enable_all()
+            .build()
+            .expect("Failed to create tokio runtime");
+
+        unsafe { RT = Some(rt) };
+    });
+}
+
+#[no_mangle]
+#[allow(static_mut_refs)]
+pub unsafe extern "C" fn shutdown_async_runtime() {
+    SHUTDOWN.call_once(|| {
+        // Shutdown the tokio runtime
+        unsafe {
+            if let Some(rt) =  RT.take() {
+                rt.shutdown_timeout(std::time::Duration::from_secs(5));
+            }
+        }
+    });
+}
+
 #[cfg(feature = "zeroidc")]
 use crate::zeroidc::ZeroIDC;
 
@@ -419,8 +451,7 @@ pub unsafe extern "C" fn smee_client_delete(ptr: *mut SmeeClient) {
         assert!(!ptr.is_null());
         Box::from_raw(&mut *ptr)
     };
-
-    smee.shutdown();
+    drop(smee);
 }
 
 #[cfg(feature = "ztcontroller")]

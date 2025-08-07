@@ -67,6 +67,8 @@ CV1::CV1(const Identity& myId, const char* path, int listenPort, RedisConfig* rc
 	auto span = tracer->StartSpan("cv1::CV1");
 	auto scope = tracer->WithActiveSpan(span);
 
+	rustybits::init_async_runtime();
+
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
 	_connString = std::string(path);
@@ -156,6 +158,8 @@ CV1::~CV1()
 		rustybits::smee_client_delete(_smee);
 		_smee = NULL;
 	}
+
+	rustybits::shutdown_async_runtime();
 
 	_run = 0;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
