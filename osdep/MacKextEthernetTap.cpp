@@ -454,7 +454,7 @@ MacKextEthernetTap::~MacKextEthernetTap()
 			globalTapsRunning = 0;	 // sanity check -- should not be possible
 
 			char tmp[16384];
-			sprintf(tmp, "%s/%s", _homePath.c_str(), "tap.kext");
+			snprintf(tmp, sizeof(tmp), "%s/%s", _homePath.c_str(), "tap.kext");
 			long kextpid = (long)fork();
 			if (kextpid == 0) {
 				OSUtils::redirectUnixOutputs("/dev/null", (const char*)0);

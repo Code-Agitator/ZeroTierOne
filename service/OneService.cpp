@@ -25,7 +25,6 @@
 #include "../include/ZeroTierOne.h"
 #include "../node/Bond.hpp"
 #include "../node/Constants.hpp"
-#include "../node/Identity.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/MAC.hpp"
 #include "../node/Mutex.hpp"
@@ -657,11 +656,11 @@ static void _peerToJson(nlohmann::json& pj, const ZT_Peer* peer, SharedPtr<Bond>
 		case ZT_PEER_ROLE_LEAF:
 			prole = "LEAF";
 			break;
-		case ZT_PEER_ROLE_MOON:
-			prole = "MOON";
-			break;
 		case ZT_PEER_ROLE_PLANET:
 			prole = "PLANET";
+			break;
+		default:
+			prole = "???";
 			break;
 	}
 
@@ -719,28 +718,6 @@ static void _peerToJson(nlohmann::json& pj, const ZT_Peer* peer, SharedPtr<Bond>
 		pa.push_back(j);
 	}
 	pj["paths"] = pa;
-}
-
-static void _moonToJson(nlohmann::json& mj, const World& world)
-{
-	char tmp[4096];
-	OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.16llx", world.id());
-	mj["id"] = tmp;
-	mj["timestamp"] = world.timestamp();
-	mj["signature"] = Utils::hex(world.signature().data, ZT_ECC_SIGNATURE_LEN, tmp);
-	mj["updatesMustBeSignedBy"] = Utils::hex(world.updatesMustBeSignedBy().data, ZT_ECC_PUBLIC_KEY_SET_LEN, tmp);
-	nlohmann::json ra = nlohmann::json::array();
-	for (std::vector<World::Root>::const_iterator r(world.roots().begin()); r != world.roots().end(); ++r) {
-		nlohmann::json rj;
-		rj["identity"] = r->identity.toString(false, tmp);
-		nlohmann::json eps = nlohmann::json::array();
-		for (std::vector<InetAddress>::const_iterator a(r->stableEndpoints.begin()); a != r->stableEndpoints.end(); ++a)
-			eps.push_back(a->toString(tmp));
-		rj["stableEndpoints"] = eps;
-		ra.push_back(rj);
-	}
-	mj["roots"] = ra;
-	mj["waiting"] = false;
 }
 
 class OneServiceImpl;
@@ -821,7 +798,6 @@ class OneServiceImpl : public OneService {
 	std::string _metricsToken;
 	std::string _controllerDbPath;
 	const std::string _networksPath;
-	const std::string _moonsPath;
 
 	EmbeddedNetworkController* _controller;
 	Phy<OneServiceImpl*> _phy;
@@ -941,7 +917,6 @@ class OneServiceImpl : public OneService {
 		: _homePath((hp) ? hp : ".")
 		, _controllerDbPath(_homePath + ZT_PATH_SEPARATOR_S "controller.d")
 		, _networksPath(_homePath + ZT_PATH_SEPARATOR_S "networks.d")
-		, _moonsPath(_homePath + ZT_PATH_SEPARATOR_S "moons.d")
 		, _controller((EmbeddedNetworkController*)0)
 		, _phy(this, false, true)
 		, _node((Node*)0)
@@ -1272,23 +1247,12 @@ class OneServiceImpl : public OneService {
 				}
 			}
 
-			// Orbit existing moons in moons.d
-			{
-				std::vector<std::string> moonsDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S "moons.d").c_str()));
-				for (std::vector<std::string>::iterator f(moonsDotD.begin()); f != moonsDotD.end(); ++f) {
-					std::size_t dot = f->find_last_of('.');
-					if ((dot == 16) && (f->substr(16) == ".moon"))
-						_node->orbit((void*)0, Utils::hexStrToU64(f->substr(0, dot).c_str()), 0);
-				}
-			}
-
 			// Main I/O loop
 			_nextBackgroundTaskDeadline = 0;
 			int64_t clockShouldBe = OSUtils::now();
 			_lastRestart = clockShouldBe;
 			int64_t lastTapMulticastGroupCheck = 0;
 			int64_t lastBindRefresh = 0;
-			int64_t lastUpdateCheck = clockShouldBe;
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalConfFileCheck = OSUtils::now();
 			int64_t lastOnline = lastLocalConfFileCheck;
@@ -1729,8 +1693,6 @@ class OneServiceImpl : public OneService {
 		std::string configPath = "/config";
 		std::string configPostPath = "/config/settings";
 		std::string healthPath = "/health";
-		std::string moonListPath = "/moon";
-		std::string moonPath = "/moon/([0-9a-fA-F]{10})";
 		std::string networkListPath = "/network";
 		std::string networkPath = "/network/([0-9a-fA-F]{16})";
 		std::string peerListPath = "/peer";
@@ -1792,7 +1754,7 @@ class OneServiceImpl : public OneService {
 					if (match.matched) {
 						// fallback
 						char indexHtmlPath[16384];
-						sprintf(indexHtmlPath, "%s/%s/%s", appUiDir, match.str().c_str(), "index.html");
+						snprintf(indexHtmlPath, sizeof(indexHtmlPath), "%s/%s/%s", appUiDir, match.str().c_str(), "index.html");
 						// fprintf(stderr, "fallback path %s\n", indexHtmlPath);
 
 						std::string indexHtml;
@@ -1816,7 +1778,7 @@ class OneServiceImpl : public OneService {
 					// add .html
 					std::string htmlFile;
 					char htmlPath[16384];
-					sprintf(htmlPath, "%s%s%s", appUiDir, (req.path).substr(appUiPath.length()).c_str(), ".html");
+					snprintf(htmlPath, sizeof(htmlPath), "%s%s%s", appUiDir, (req.path).substr(appUiPath.length()).c_str(), ".html");
 					// fprintf(stderr, "path: %s\n", htmlPath);
 					if (OSUtils::readFile(htmlPath, htmlFile)) {
 						res.set_content(htmlFile.c_str(), "text/html");
@@ -2124,109 +2086,6 @@ class OneServiceImpl : public OneService {
 		};
 		_controlPlane.Get(healthPath, healthGet);
 		_controlPlaneV6.Get(healthPath, healthGet);
-
-		auto moonListGet = [&, setContent](const httplib::Request& req, httplib::Response& res) {
-			auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-			auto tracer = provider->GetTracer("http_control_plane");
-			auto span = tracer->StartSpan("http_control_plane::moonListGet");
-			auto scope = tracer->WithActiveSpan(span);
-
-			std::vector<World> moons(_node->moons());
-
-			auto out = json::array();
-			for (auto i = moons.begin(); i != moons.end(); ++i) {
-				json mj;
-				_moonToJson(mj, *i);
-				out.push_back(mj);
-			}
-			setContent(req, res, out.dump());
-		};
-		_controlPlane.Get(moonListPath, moonListGet);
-		_controlPlaneV6.Get(moonListPath, moonListGet);
-
-		auto moonGet = [&, setContent](const httplib::Request& req, httplib::Response& res) {
-			auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-			auto tracer = provider->GetTracer("http_control_plane");
-			auto span = tracer->StartSpan("http_control_plane::moonGet");
-			auto scope = tracer->WithActiveSpan(span);
-
-			std::vector<World> moons(_node->moons());
-			auto input = req.matches[1];
-			auto out = json::object();
-			const uint64_t id = Utils::hexStrToU64(input.str().c_str());
-			for (auto i = moons.begin(); i != moons.end(); ++i) {
-				if (i->id() == id) {
-					_moonToJson(out, *i);
-					break;
-				}
-			}
-			setContent(req, res, out.dump());
-		};
-		_controlPlane.Get(moonPath, moonGet);
-		_controlPlaneV6.Get(moonPath, moonGet);
-
-		auto moonPost = [&, setContent](const httplib::Request& req, httplib::Response& res) {
-			auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-			auto tracer = provider->GetTracer("http_control_plane");
-			auto span = tracer->StartSpan("http_control_plane::moonPost");
-			auto scope = tracer->WithActiveSpan(span);
-
-			auto input = req.matches[1];
-			uint64_t seed = 0;
-			try {
-				json j(OSUtils::jsonParse(req.body));
-				if (j.is_object()) {
-					seed = Utils::hexStrToU64(OSUtils::jsonString(j["seed"], "0").c_str());
-				}
-			}
-			catch (...) {
-				// discard invalid JSON
-			}
-
-			std::vector<World> moons(_node->moons());
-			const uint64_t id = Utils::hexStrToU64(input.str().c_str());
-			bool found = false;
-			auto out = json::object();
-			for (std::vector<World>::const_iterator m(moons.begin()); m != moons.end(); ++m) {
-				if (m->id() == id) {
-					_moonToJson(out, *m);
-					found = true;
-					break;
-				}
-			}
-
-			if (! found && seed != 0) {
-				char tmp[64];
-				OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.16llx", id);
-				out["id"] = tmp;
-				out["roots"] = json::array();
-				out["timestamp"] = 0;
-				out["signature"] = json();
-				out["updatesMustBeSignedBy"] = json();
-				out["waiting"] = true;
-				_node->orbit((void*)0, id, seed);
-			}
-			setContent(req, res, out.dump());
-		};
-		_controlPlane.Post(moonPath, moonPost);
-		_controlPlane.Put(moonPath, moonPost);
-		_controlPlaneV6.Post(moonPath, moonPost);
-		_controlPlaneV6.Put(moonPath, moonPost);
-
-		auto moonDelete = [&, setContent](const httplib::Request& req, httplib::Response& res) {
-			auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-			auto tracer = provider->GetTracer("http_control_plane");
-			auto span = tracer->StartSpan("http_control_plane::moonDelete");
-			auto scope = tracer->WithActiveSpan(span);
-
-			auto input = req.matches[1];
-			uint64_t id = Utils::hexStrToU64(input.str().c_str());
-			auto out = json::object();
-			_node->deorbit((void*)0, id);
-			out["result"] = true;
-			setContent(req, res, out.dump());
-		};
-		_controlPlane.Delete(moonPath, moonDelete);
 
 		auto networkListGet = [&, setContent](const httplib::Request& req, httplib::Response& res) {
 			auto provider = opentelemetry::trace::Provider::GetTracerProvider();
@@ -3752,10 +3611,6 @@ class OneServiceImpl : public OneService {
 			case ZT_STATE_OBJECT_PLANET:
 				OSUtils::ztsnprintf(p, sizeof(p), "%s" ZT_PATH_SEPARATOR_S "planet", _homePath.c_str());
 				break;
-			case ZT_STATE_OBJECT_MOON:
-				OSUtils::ztsnprintf(dirname, sizeof(dirname), "%s" ZT_PATH_SEPARATOR_S "moons.d", _homePath.c_str());
-				OSUtils::ztsnprintf(p, sizeof(p), "%s" ZT_PATH_SEPARATOR_S "%.16llx.moon", dirname, (unsigned long long)id[0]);
-				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
 				OSUtils::ztsnprintf(dirname, sizeof(dirname), "%s" ZT_PATH_SEPARATOR_S "networks.d", _homePath.c_str());
 				OSUtils::ztsnprintf(p, sizeof(p), "%s" ZT_PATH_SEPARATOR_S "%.16llx.conf", dirname, (unsigned long long)id[0]);
@@ -3904,9 +3759,6 @@ class OneServiceImpl : public OneService {
 				break;
 			case ZT_STATE_OBJECT_PLANET:
 				OSUtils::ztsnprintf(p, sizeof(p), "%s" ZT_PATH_SEPARATOR_S "planet", _homePath.c_str());
-				break;
-			case ZT_STATE_OBJECT_MOON:
-				OSUtils::ztsnprintf(p, sizeof(p), "%s" ZT_PATH_SEPARATOR_S "moons.d" ZT_PATH_SEPARATOR_S "%.16llx.moon", _homePath.c_str(), (unsigned long long)id[0]);
 				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
 				OSUtils::ztsnprintf(p, sizeof(p), "%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.conf", _homePath.c_str(), (unsigned long long)id[0]);
