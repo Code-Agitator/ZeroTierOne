@@ -45,5 +45,4 @@ ONE_OBJS=\
 	osdep/EthernetTap.o \
 	osdep/ManagedRoute.o \
 	osdep/Http.o \
-	service/SoftwareUpdater.o \
 	service/OneService.o

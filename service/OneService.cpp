@@ -7,11 +7,8 @@
  */
 
 #include <algorithm>
-#include <condition_variable>
 #include <exception>
-#include <list>
 #include <map>
-#include <mutex>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,24 +30,17 @@
 #include "../node/MAC.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Node.hpp"
-#include "../node/PacketMultiplexer.hpp"
 #include "../node/Peer.hpp"
-#include "../node/Poly1305.hpp"
-#include "../node/SHA512.hpp"
-#include "../node/Salsa20.hpp"
 #include "../node/Utils.hpp"
 #include "../node/World.hpp"
 #include "../osdep/Binder.hpp"
 #include "../osdep/BlockingQueue.hpp"
-#include "../osdep/ExtOsdep.hpp"
-#include "../osdep/Http.hpp"
 #include "../osdep/ManagedRoute.hpp"
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Phy.hpp"
 #include "../osdep/PortMapper.hpp"
 #include "../version.h"
 #include "OneService.hpp"
-#include "SoftwareUpdater.hpp"
 
 #include <cpp-httplib/httplib.h>
 
@@ -81,8 +71,8 @@ namespace sdkmetrics = opentelemetry::v1::sdk::metrics;
 namespace sdklogs = opentelemetry::v1::sdk::logs;
 namespace sdkresource = opentelemetry::v1::sdk::resource;
 #else
-#include "opentelemetry/logs/logger.h"
-#include "opentelemetry/metrics/provider.h"
+// #include "opentelemetry/logs/logger.h"
+// #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/trace/provider.h"
 #endif
 
@@ -836,7 +826,6 @@ class OneServiceImpl : public OneService {
 	EmbeddedNetworkController* _controller;
 	Phy<OneServiceImpl*> _phy;
 	Node* _node;
-	SoftwareUpdater* _updater;
 	bool _updateAutoApply;
 
 	httplib::Server _controlPlane;
@@ -956,7 +945,6 @@ class OneServiceImpl : public OneService {
 		, _controller((EmbeddedNetworkController*)0)
 		, _phy(this, false, true)
 		, _node((Node*)0)
-		, _updater((SoftwareUpdater*)0)
 		, _updateAutoApply(false)
 		, _controlPlane()
 		, _controlPlaneV6()
@@ -1327,13 +1315,6 @@ class OneServiceImpl : public OneService {
 					restarted = true;
 				}
 
-				// Check for updates (if enabled)
-				if ((_updater) && ((now - lastUpdateCheck) > 10000)) {
-					lastUpdateCheck = now;
-					if (_updater->check(now) && _updateAutoApply)
-						_updater->apply();
-				}
-
 				// Reload local.conf if anything changed recently
 				if ((now - lastLocalConfFileCheck) >= ZT_LOCAL_CONF_FILE_CHECK_INTERVAL) {
 					lastLocalConfFileCheck = now;
@@ -1517,8 +1498,6 @@ class OneServiceImpl : public OneService {
 			_nets.clear();
 		}
 
-		delete _updater;
-		_updater = (SoftwareUpdater*)0;
 		delete _node;
 		_node = (Node*)0;
 
@@ -1786,7 +1765,7 @@ class OneServiceImpl : public OneService {
 		if (_enableWebServer) {
 			static std::string appUiPath = "/app";
 			static char appUiDir[16384];
-			sprintf(appUiDir, "%s%s", _homePath.c_str(), appUiPath.c_str());
+			snprintf(appUiDir, sizeof(appUiDir), "%s%s", _homePath.c_str(), appUiPath.c_str());
 
 			auto ret = _controlPlane.set_mount_point(appUiPath, appUiDir);
 			_controlPlaneV6.set_mount_point(appUiPath, appUiDir);
@@ -2489,10 +2468,6 @@ class OneServiceImpl : public OneService {
 #else
 			settings["portMappingEnabled"] = false;	  // not supported in build
 #endif
-#ifndef ZT_SDK
-			settings["softwareUpdate"] = OSUtils::jsonString(settings["softwareUpdate"], ZT_SOFTWARE_UPDATE_DEFAULT);
-			settings["softwareUpdateChannel"] = OSUtils::jsonString(settings["softwareUpdateChannel"], ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL);
-#endif
 			const World planet(_node->planet());
 			out["planetWorldId"] = planet.id();
 			out["planetWorldTimestamp"] = planet.timestamp();
@@ -2928,23 +2903,6 @@ class OneServiceImpl : public OneService {
 		_multicoreEnabled = false;
 		_concurrency = 1;
 		_cpuPinningEnabled = false;
-#endif
-
-#ifndef ZT_SDK
-		const std::string up(OSUtils::jsonString(settings["softwareUpdate"], ZT_SOFTWARE_UPDATE_DEFAULT));
-		const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"], false);
-		if (((up == "apply") || (up == "download")) || (udist)) {
-			if (! _updater)
-				_updater = new SoftwareUpdater(*_node, _homePath);
-			_updateAutoApply = (up == "apply");
-			_updater->setUpdateDistribution(udist);
-			_updater->setChannel(OSUtils::jsonString(settings["softwareUpdateChannel"], ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL));
-		}
-		else {
-			delete _updater;
-			_updater = (SoftwareUpdater*)0;
-			_updateAutoApply = false;
-		}
 #endif
 
 		json& ignoreIfs = settings["interfacePrefixBlacklist"];
@@ -3682,13 +3640,6 @@ class OneServiceImpl : public OneService {
 				if (metaData) {
 					::fprintf(stderr, "%s" ZT_EOL_S, (const char*)metaData);
 					::fflush(stderr);
-				}
-			} break;
-
-			case ZT_EVENT_USER_MESSAGE: {
-				const ZT_UserMessage* um = reinterpret_cast<const ZT_UserMessage*>(metaData);
-				if ((um->typeId == ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE) && (_updater)) {
-					_updater->handleSoftwareUpdateUserMessage(um->origin, um->data, um->length);
 				}
 			} break;
 
