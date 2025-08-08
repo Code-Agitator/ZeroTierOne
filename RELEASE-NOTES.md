@@ -16,6 +16,7 @@ ZeroTier Release Notes
     * A flow designation issue in bridged traffic under multipath scenarios has been fixed.
     * Library version updates for OIDC and other features.
     * Repository cleanup.
+    * Antiquated and unused software update code removed for precautionary reasons.
     * Other minor bug fixes.
 
 ----
