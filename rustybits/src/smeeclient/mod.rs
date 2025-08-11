@@ -11,13 +11,12 @@
  */
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-use std::time::Duration;
 use temporal_client::{Client, ClientOptionsBuilder, RetryClient, WorkflowClientTrait, WorkflowOptions};
 use temporal_sdk_core_protos::{
     coresdk::AsJsonPayloadExt,
     temporal::api::enums::v1::{WorkflowIdConflictPolicy, WorkflowIdReusePolicy},
 };
-use tokio::runtime::{Handle, Runtime};
+use tokio::runtime::Handle;
 use url::Url;
 use uuid::Uuid;
 
