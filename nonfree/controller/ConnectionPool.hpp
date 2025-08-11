@@ -1,15 +1,6 @@
-/*
- * Copyright (c)2021 ZeroTier, Inc.
- *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+/* (c) ZeroTier, Inc.
+ * See LICENSE.txt in nonfree/
  */
-/****/
 
 #ifndef ZT_CONNECTION_POOL_H_
 #define ZT_CONNECTION_POOL_H_
@@ -18,7 +9,7 @@
 #define _DEBUG(x)
 #endif
 
-#include "../node/Metrics.hpp"
+#include "../../node/Metrics.hpp"
 #include "opentelemetry/trace/provider.h"
 
 #include <deque>
@@ -26,7 +17,6 @@
 #include <memory>
 #include <mutex>
 #include <set>
-#include <string>
 
 namespace ZeroTier {
 

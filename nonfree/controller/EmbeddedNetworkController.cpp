@@ -1,15 +1,6 @@
-/*
- * Copyright (c)2019 ZeroTier, Inc.
- *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+/* (c) ZeroTier, Inc.
+ * See LICENSE.txt in nonfree/
  */
-/****/
 
 #include <stdint.h>
 #include <stdio.h>
@@ -20,10 +11,9 @@
 #ifndef _WIN32
 #include <sys/time.h>
 #endif
-#include "../include/ZeroTierOne.h"
+#include "../../include/ZeroTierOne.h"
 #include "EmbeddedNetworkController.hpp"
 #include "FileDB.hpp"
-#include "LFDB.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -620,36 +610,6 @@ void EmbeddedNetworkController::init(const Identity& signingId, Sender* sender)
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	}
 #endif
-
-	std::string lfJSON;
-	OSUtils::readFile((_ztPath + ZT_PATH_SEPARATOR_S "local.conf").c_str(), lfJSON);
-	if (lfJSON.length() > 0) {
-		nlohmann::json lfConfig(OSUtils::jsonParse(lfJSON));
-		nlohmann::json& settings = lfConfig["settings"];
-		if (settings.is_object()) {
-			nlohmann::json& controllerDb = settings["controllerDb"];
-			if (controllerDb.is_object()) {
-				std::string type = controllerDb["type"];
-				if (type == "lf") {
-					std::string lfOwner = controllerDb["owner"];
-					std::string lfHost = controllerDb["host"];
-					int lfPort = controllerDb["port"];
-					bool storeOnlineState = controllerDb["storeOnlineState"];
-					if ((lfOwner.length()) && (lfHost.length()) && (lfPort > 0) && (lfPort < 65536)) {
-						std::size_t pubHdrLoc = lfOwner.find("Public: ");
-						if ((pubHdrLoc > 0) && ((pubHdrLoc + 8) < lfOwner.length())) {
-							std::string lfOwnerPublic = lfOwner.substr(pubHdrLoc + 8);
-							std::size_t pubHdrEnd = lfOwnerPublic.find_first_of("\n\r\t ");
-							if (pubHdrEnd != std::string::npos) {
-								lfOwnerPublic = lfOwnerPublic.substr(0, pubHdrEnd);
-								_db.addDB(std::shared_ptr<DB>(new LFDB(_signingId, _path.c_str(), lfOwner.c_str(), lfOwnerPublic.c_str(), lfHost.c_str(), lfPort, storeOnlineState)));
-							}
-						}
-					}
-				}
-			}
-		}
-	}
 
 	_db.waitForReady();
 }
