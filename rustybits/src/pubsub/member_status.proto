@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pbmessages;
+
+import "metadata.proto";
+
+message MemberStatus {
+    Metadata metadata = 1;
+    string network_id = 2;
+    string member_id = 3;
+    uint64 timestamp = 4; // Unix timestamp in milliseconds
+    optional string ip_address = 5; // Optional IP address of the member
+    optional string os = 6;
+    optional string arch = 7;
+    optional string version = 8;
+}

@@ -12,6 +12,9 @@
 
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::runtime;
 use url::Url;
 
 static mut RT: Option<tokio::runtime::Runtime> = None;
@@ -39,7 +42,7 @@ pub unsafe extern "C" fn shutdown_async_runtime() {
     SHUTDOWN.call_once(|| {
         // Shutdown the tokio runtime
         unsafe {
-            if let Some(rt) =  RT.take() {
+            if let Some(rt) = RT.take() {
                 rt.shutdown_timeout(std::time::Duration::from_secs(5));
             }
         }
@@ -482,6 +485,134 @@ pub unsafe extern "C" fn smee_client_notify_network_joined(
         Ok(()) => true,
         Err(e) => {
             println!("error notifying network joined: {0}", e);
+            false
+        }
+    }
+}
+
+#[cfg(feature = "ztcontroller")]
+use crate::pubsub::member_listener::MemberListener;
+#[cfg(feature = "ztcontroller")]
+use crate::pubsub::network_listener::NetworkListener;
+
+#[cfg(feature = "ztcontroller")]
+#[no_mangle]
+pub unsafe extern "C" fn init_network_listener(
+    controller_id: *const c_char,
+    listen_timeout: u64,
+) -> *const Arc<NetworkListener> {
+    if listen_timeout == 0 {
+        println!("listen_timeout is zero");
+        return std::ptr::null_mut();
+    }
+    if controller_id.is_null() {
+        println!("controller_id is null");
+        return std::ptr::null_mut();
+    }
+
+    let id = unsafe { CStr::from_ptr(controller_id) }.to_str().unwrap();
+
+    let rt = runtime::Handle::current();
+    rt.block_on(async {
+        match NetworkListener::new(id, Duration::from_secs(listen_timeout)).await {
+            Ok(listener) => Arc::into_raw(Arc::new(listener)),
+            Err(e) => {
+                println!("error creating network listener: {}", e);
+                std::ptr::null_mut()
+            }
+        }
+    })
+}
+
+#[cfg(feature = "ztcontroller")]
+#[no_mangle]
+pub unsafe extern "C" fn network_listener_delete(ptr: *const Arc<NetworkListener>) {
+    if ptr.is_null() {
+        return;
+    }
+    drop(Arc::from_raw(ptr));
+}
+
+#[cfg(feature = "ztcontroller")]
+#[no_mangle]
+pub unsafe extern "C" fn network_listener_listen(ptr: *const Arc<NetworkListener>) -> bool {
+    use std::mem::ManuallyDrop;
+    if ptr.is_null() {
+        println!("ptr is null");
+        return false;
+    }
+
+    let listener = ManuallyDrop::new(unsafe { Arc::from_raw(ptr) });
+
+    let rt = runtime::Handle::current();
+    match rt.block_on(listener.listen()) {
+        Ok(_) => {
+            println!("Network listener started successfully");
+            true
+        }
+        Err(e) => {
+            println!("Error starting network listener: {}", e);
+            false
+        }
+    }
+}
+
+#[cfg(feature = "ztcontroller")]
+#[no_mangle]
+pub unsafe extern "C" fn init_member_listener(
+    controller_id: *const c_char,
+    listen_timeout: u64,
+) -> *const Arc<MemberListener> {
+    if listen_timeout == 0 {
+        println!("listen_timeout is zero");
+        return std::ptr::null_mut();
+    }
+    if controller_id.is_null() {
+        println!("controller_id is null");
+        return std::ptr::null_mut();
+    }
+
+    let id = unsafe { CStr::from_ptr(controller_id) }.to_str().unwrap();
+
+    let rt = runtime::Handle::current();
+    rt.block_on(async {
+        match MemberListener::new(id, Duration::from_secs(listen_timeout)).await {
+            Ok(listener) => Arc::into_raw(Arc::new(listener)),
+            Err(e) => {
+                println!("error creating member listener: {}", e);
+                std::ptr::null_mut()
+            }
+        }
+    })
+}
+
+#[cfg(feature = "ztcontroller")]
+#[no_mangle]
+pub unsafe extern "C" fn member_listener_delete(ptr: *const Arc<MemberListener>) {
+    if ptr.is_null() {
+        return;
+    }
+    drop(Arc::from_raw(ptr));
+}
+
+#[cfg(feature = "ztcontroller")]
+#[no_mangle]
+pub unsafe extern "C" fn member_listener_listen(ptr: *const Arc<MemberListener>) -> bool {
+    use std::mem::ManuallyDrop;
+    if ptr.is_null() {
+        println!("ptr is null");
+        return false;
+    }
+
+    let listener = ManuallyDrop::new(unsafe { Arc::from_raw(ptr) });
+    let rt = runtime::Handle::current();
+    match rt.block_on(listener.listen()) {
+        Ok(_) => {
+            println!("Member listener started successfully");
+            true
+        }
+        Err(e) => {
+            println!("Error starting member listener: {}", e);
             false
         }
     }
