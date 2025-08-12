@@ -43,7 +43,7 @@ namespace ZeroTier {
 /* Public Node interface (C++, exposed via CAPI bindings)                   */
 /****************************************************************************/
 
-Node::Node(void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, int64_t now)
+Node::Node(void* uptr, void* tptr, const struct ZT_Node_Config* config, const struct ZT_Node_Callbacks* callbacks, int64_t now)
 	: _RR(this)
 	, RR(&_RR)
 	, _uPtr(uptr)
@@ -59,6 +59,7 @@ Node::Node(void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, in
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
 	}
 	memcpy(&_cb, callbacks, sizeof(ZT_Node_Callbacks));
+	memcpy(&_config, config, sizeof(ZT_Node_Config));
 
 	// Initialize non-cryptographic PRNG from a good random source
 	Utils::getSecureRandom((void*)_prngState, sizeof(_prngState));
@@ -918,11 +919,11 @@ void Node::ncSendError(uint64_t nwid, uint64_t requestPacketId, const Address& d
 
 extern "C" {
 
-enum ZT_ResultCode ZT_Node_new(ZT_Node** node, void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, int64_t now)
+enum ZT_ResultCode ZT_Node_new(ZT_Node** node, const struct ZT_Node_Config* config, void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, int64_t now)
 {
 	*node = (ZT_Node*)0;
 	try {
-		*node = reinterpret_cast<ZT_Node*>(new ZeroTier::Node(uptr, tptr, callbacks, now));
+		*node = reinterpret_cast<ZT_Node*>(new ZeroTier::Node(uptr, tptr, config, callbacks, now));
 		return ZT_RESULT_OK;
 	}
 	catch (std::bad_alloc& exc) {

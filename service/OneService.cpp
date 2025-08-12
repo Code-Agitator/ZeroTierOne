@@ -1158,7 +1158,11 @@ class OneServiceImpl : public OneService {
 				cb.eventCallback = SnodeEventCallback;
 				cb.pathCheckFunction = SnodePathCheckFunction;
 				cb.pathLookupFunction = SnodePathLookupFunction;
-				_node = new Node(this, (void*)0, &cb, OSUtils::now());
+				// These settings can get set later when local.conf is checked.
+				struct ZT_Node_Config config;
+				config.enableEncryptedHello = 0;
+				config.lowBandwidthMode = 0;
+				_node = new Node(this, (void*)0, &config, &cb, OSUtils::now());
 			}
 
 			// local.conf
@@ -2880,6 +2884,7 @@ class OneServiceImpl : public OneService {
 			fprintf(stderr, "WARNING: using manually-specified secondary and/or tertiary ports. This can cause NAT issues." ZT_EOL_S);
 		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"], true);
+		_node->setEncryptedHelloEnabled(OSUtils::jsonBool(settings["encryptedHelloEnabled"], false));
 		_node->setLowBandwidthMode(OSUtils::jsonBool(settings["lowBandwidthMode"], false));
 #if defined(__LINUX__) || defined(__FreeBSD__)
 		_multicoreEnabled = OSUtils::jsonBool(settings["multicoreEnabled"], false);

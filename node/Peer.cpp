@@ -459,7 +459,7 @@ void Peer::sendHELLO(void* tPtr, const int64_t localSocket, const InetAddress& a
 	Metrics::pkt_hello_out++;
 
 	if (atAddress) {
-		outp.armor(_key, false, true, nullptr, _id);
+		outp.armor(_key, false, RR->node->encryptedHelloEnabled(), nullptr, _id);
 		RR->node->expectReplyTo(outp.packetId());
 		RR->node->putPacket(tPtr, RR->node->lowBandwidthModeEnabled() ? localSocket : -1, atAddress, outp.data(), outp.size());
 	}

@@ -20,13 +20,10 @@
 #include "NetworkController.hpp"
 #include "Path.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "Salsa20.hpp"
 #include "SelfAwareness.hpp"
 
-#include <map>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <vector>
 
 // Bit mask for "expecting reply" hash
@@ -44,7 +41,7 @@ class World;
  */
 class Node : public NetworkController::Sender {
   public:
-	Node(void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, int64_t now);
+	Node(void* uptr, void* tptr, const struct ZT_Node_Config* config, const struct ZT_Node_Callbacks* callbacks, int64_t now);
 	virtual ~Node();
 
 	// Get rid of alignment warnings on 32-bit Windows and possibly improve performance
@@ -285,12 +282,22 @@ class Node : public NetworkController::Sender {
 
 	inline void setLowBandwidthMode(bool isEnabled)
 	{
-		_lowBandwidthMode = isEnabled;
+		_config.lowBandwidthMode = (int)isEnabled;
+	}
+
+	inline void setEncryptedHelloEnabled(bool isEnabled)
+	{
+		_config.enableEncryptedHello = (int)isEnabled;
 	}
 
 	inline bool lowBandwidthModeEnabled()
 	{
-		return _lowBandwidthMode;
+		return _config.lowBandwidthMode != 0;
+	}
+
+	inline bool encryptedHelloEnabled()
+	{
+		return _config.enableEncryptedHello != 0;
 	}
 
 	void initMultithreading(unsigned int concurrency, bool cpuPinningEnabled);
@@ -300,6 +307,7 @@ class Node : public NetworkController::Sender {
 	RuntimeEnvironment* RR;
 	void* _uPtr;   // _uptr (lower case) is reserved in Visual Studio :P
 	ZT_Node_Callbacks _cb;
+	ZT_Node_Config _config;
 
 	// For tracking packet IDs to filter out OK/ERROR replies to packets we did not send
 	uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];

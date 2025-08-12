@@ -1746,6 +1746,33 @@ struct ZT_Node_Callbacks {
 };
 
 /**
+ * Node configuration options
+ */
+struct ZT_Node_Config {
+	/**
+	 * If non-zero enable encrypted HELLO packets.
+	 *
+	 * This attaches an ephemeral key to HELLO packets and encrypts them. It
+	 * increases CPU usage slightly, which can matter at scale for nodes that
+	 * handle huge numbers of clients like controllers. HELLO packets only
+	 * contain keys and a small amount of meta-data like node version, never
+	 * user data or information about things like network membership, so the
+	 * security impact of this is negligable. ZT1 does not and never has
+	 * guaranteed meta-data privacy, only data privacy. Enable only if you
+	 * need it for compliance reasons.
+	 */
+	int enableEncryptedHello;
+
+	/**
+	 * If non-zero enable low bandwidth mode.
+	 *
+	 * This reduces keepalive and path sensing traffic, which can slow fail-
+	 * over but reduces idle bandwidth. Enable in low bandwidth environments.
+	 */
+	int lowBandwidthMode;
+};
+
+/**
  * Create a new ZeroTier node
  *
  * This will attempt to load its identity via the state get function in the
@@ -1754,13 +1781,14 @@ struct ZT_Node_Callbacks {
  * to a few seconds depending on your CPU speed.
  *
  * @param node Result: pointer is set to new node instance on success
+ * @param config Node-wide configuration options set on startup
  * @param uptr User pointer to pass to functions/callbacks
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param callbacks Callback function configuration
  * @param now Current clock in milliseconds
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_new(ZT_Node** node, void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, int64_t now);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_new(ZT_Node** node, const struct ZT_Node_Config* config, void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, int64_t now);
 
 /**
  * Delete a node and free all resources it consumes
