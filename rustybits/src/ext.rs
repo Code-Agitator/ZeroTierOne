@@ -12,8 +12,11 @@
 
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+#[cfg(feature = "ztcontroller")]
+use std::os::raw::c_void;
 use std::sync::Arc;
 use std::time::Duration;
+#[cfg(feature = "ztcontroller")]
 use tokio::runtime;
 use url::Url;
 
@@ -496,10 +499,17 @@ use crate::pubsub::member_listener::MemberListener;
 use crate::pubsub::network_listener::NetworkListener;
 
 #[cfg(feature = "ztcontroller")]
+use crate::pubsub::member_listener::MemberListenerCallback;
+#[cfg(feature = "ztcontroller")]
+use crate::pubsub::network_listener::NetworkListenerCallback;
+
+#[cfg(feature = "ztcontroller")]
 #[no_mangle]
 pub unsafe extern "C" fn init_network_listener(
     controller_id: *const c_char,
     listen_timeout: u64,
+    callback: NetworkListenerCallback,
+    user_ptr: *mut c_void,
 ) -> *const Arc<NetworkListener> {
     if listen_timeout == 0 {
         println!("listen_timeout is zero");
@@ -514,7 +524,7 @@ pub unsafe extern "C" fn init_network_listener(
 
     let rt = runtime::Handle::current();
     rt.block_on(async {
-        match NetworkListener::new(id, Duration::from_secs(listen_timeout)).await {
+        match NetworkListener::new(id, Duration::from_secs(listen_timeout), callback, user_ptr).await {
             Ok(listener) => Arc::into_raw(Arc::new(listener)),
             Err(e) => {
                 println!("error creating network listener: {}", e);
@@ -562,6 +572,8 @@ pub unsafe extern "C" fn network_listener_listen(ptr: *const Arc<NetworkListener
 pub unsafe extern "C" fn init_member_listener(
     controller_id: *const c_char,
     listen_timeout: u64,
+    callback: MemberListenerCallback,
+    user_ptr: *mut c_void,
 ) -> *const Arc<MemberListener> {
     if listen_timeout == 0 {
         println!("listen_timeout is zero");
@@ -576,7 +588,7 @@ pub unsafe extern "C" fn init_member_listener(
 
     let rt = runtime::Handle::current();
     rt.block_on(async {
-        match MemberListener::new(id, Duration::from_secs(listen_timeout)).await {
+        match MemberListener::new(id, Duration::from_secs(listen_timeout), callback, user_ptr).await {
             Ok(listener) => Arc::into_raw(Arc::new(listener)),
             Err(e) => {
                 println!("error creating member listener: {}", e);

@@ -88,33 +88,42 @@ impl ChangeListener {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
 
-    // use testcontainers::runners::AsyncRunner;
-    // use testcontainers_modules::google_cloud_sdk_emulators;
-    // use tokio;
+    use testcontainers::runners::AsyncRunner;
+    use testcontainers::ContainerAsync;
+    use testcontainers_modules::google_cloud_sdk_emulators;
+    use testcontainers_modules::google_cloud_sdk_emulators::CloudSdk;
+    use tokio;
 
-    // #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    // async fn setup_pubsub_emulator() -> Result<(), Box<dyn std::error::Error + 'static>> {
-    //     let container = google_cloud_sdk_emulators::CloudSdk::pubsub().start().await?;
+    async fn setup_pubsub_emulator() -> Result<(ContainerAsync<CloudSdk>, String), Box<dyn std::error::Error>> {
+        let container = google_cloud_sdk_emulators::CloudSdk::pubsub().start().await?;
+        let port = container.get_host_port_ipv4(8085).await?;
+        let host = format!("localhost:{}", port);
+        Ok((container, host))
+    }
 
-    //     let port = container.get_host_port_ipv4(8085).await?;
-    //     let host = format!("localhost:{}", port);
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_can_connect_to_pubsub() -> Result<(), Box<dyn std::error::Error + 'static>> {
+        let (_container, host) = setup_pubsub_emulator().await?;
 
-    //     unsafe {
-    //         std::env::set_var("PUBSUB_EMULATOR_HOST", host);
-    //     }
+        unsafe {
+            std::env::set_var("PUBSUB_EMULATOR_HOST", host);
+        }
 
-    //     let cl = ChangeListener::new(
-    //         "test_controller",
-    //         "test_topic",
-    //         "test_subscription",
-    //         Duration::from_secs(10),
-    //     )
-    //     .await;
+        let (tx, _rx) = tokio::sync::mpsc::channel(64);
 
-    //     assert!(cl.is_ok(), "Failed to connect to pubsub emulator: {:?}", cl.err());
+        let cl = ChangeListener::new(
+            "test_controller",
+            "test_topic",
+            "test_subscription",
+            Duration::from_secs(10),
+            tx,
+        )
+        .await;
 
-    //     Ok(())
-    // }
+        assert!(cl.is_ok(), "Failed to connect to pubsub emulator: {:?}", cl.err());
+
+        Ok(())
+    }
 }
