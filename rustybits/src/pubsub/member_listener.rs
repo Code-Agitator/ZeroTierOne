@@ -9,7 +9,7 @@ use std::time::Duration;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::Mutex;
 
-pub type MemberListenerCallback = extern "C" fn(*const c_void, *const u8, usize);
+pub type MemberListenerCallback = extern "C" fn(*mut c_void, *const u8, usize);
 
 /**
  * Member Listener listens for member changes and passes them back to the controller

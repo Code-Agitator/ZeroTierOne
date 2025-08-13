@@ -505,7 +505,7 @@ use crate::pubsub::network_listener::NetworkListenerCallback;
 
 #[cfg(feature = "ztcontroller")]
 #[no_mangle]
-pub unsafe extern "C" fn init_network_listener(
+pub unsafe extern "C" fn network_listener_new(
     controller_id: *const c_char,
     listen_timeout: u64,
     callback: NetworkListenerCallback,
@@ -569,7 +569,7 @@ pub unsafe extern "C" fn network_listener_listen(ptr: *const Arc<NetworkListener
 
 #[cfg(feature = "ztcontroller")]
 #[no_mangle]
-pub unsafe extern "C" fn init_member_listener(
+pub unsafe extern "C" fn member_listener_new(
     controller_id: *const c_char,
     listen_timeout: u64,
     callback: MemberListenerCallback,
