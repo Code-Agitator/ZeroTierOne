@@ -25,6 +25,7 @@ static mut RT: Option<tokio::runtime::Runtime> = None;
 static START: std::sync::Once = std::sync::Once::new();
 static SHUTDOWN: std::sync::Once = std::sync::Once::new();
 
+#[cfg(feature = "ztcontroller")]
 #[no_mangle]
 pub unsafe extern "C" fn init_async_runtime() {
     START.call_once(|| {
@@ -39,6 +40,7 @@ pub unsafe extern "C" fn init_async_runtime() {
     });
 }
 
+#[cfg(feature = "ztcontroller")]
 #[no_mangle]
 #[allow(static_mut_refs)]
 pub unsafe extern "C" fn shutdown_async_runtime() {

@@ -24,7 +24,12 @@ impl ChangeListener {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let config = ClientConfig::default().with_auth().await.unwrap();
         let client = Client::new(config).await?;
+
         let topic = client.topic(topic_name);
+        if !topic.exists(None).await? {
+            topic.create(None, None).await?;
+        }
+
         Ok(Self {
             client,
             topic,
@@ -35,6 +40,14 @@ impl ChangeListener {
         })
     }
 
+    /**
+     * Listens for changes on the topic and sends them to the provided sender.
+     *
+     * Listens for up to `listen_timeout` duration, at which point it will stop listening
+     * and return.  listen will have to be called again to continue listening.
+     *
+     * If the subscription does not exist, it will create it with the specified configuration.
+     */
     pub async fn listen(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config = SubscriptionConfig {
             enable_message_ordering: true,
@@ -87,7 +100,7 @@ impl ChangeListener {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     use testcontainers::runners::AsyncRunner;
@@ -96,20 +109,22 @@ mod tests {
     use testcontainers_modules::google_cloud_sdk_emulators::CloudSdk;
     use tokio;
 
-    async fn setup_pubsub_emulator() -> Result<(ContainerAsync<CloudSdk>, String), Box<dyn std::error::Error>> {
+    pub(crate) async fn setup_pubsub_emulator() -> Result<(ContainerAsync<CloudSdk>, String), Box<dyn std::error::Error>>
+    {
         let container = google_cloud_sdk_emulators::CloudSdk::pubsub().start().await?;
         let port = container.get_host_port_ipv4(8085).await?;
         let host = format!("localhost:{}", port);
+
+        unsafe {
+            std::env::set_var("PUBSUB_EMULATOR_HOST", host.clone());
+        }
+
         Ok((container, host))
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_can_connect_to_pubsub() -> Result<(), Box<dyn std::error::Error + 'static>> {
-        let (_container, host) = setup_pubsub_emulator().await?;
-
-        unsafe {
-            std::env::set_var("PUBSUB_EMULATOR_HOST", host);
-        }
+        let (_container, _host) = setup_pubsub_emulator().await?;
 
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
 
