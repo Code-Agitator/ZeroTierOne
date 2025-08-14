@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["staticlib", "rlib"]
 
 [features]
-default = ["zeroidc"]
+default = ["zeroidc", "ztcontroller"]
 zeroidc = []
 ztcontroller = [
     "dep:serde",
@@ -22,6 +22,7 @@ ztcontroller = [
     "dep:gcloud-googleapis",
     "dep:tokio",
     "dep:tokio-util",
+    "dep:futures",
 ]
 
 [dependencies]
@@ -56,6 +57,7 @@ prost = { version = "0.14", optional = true, features = ["derive"] }
 prost-types = { version = "0.14", optional = true }
 gcloud-gax = { version = "1.2.0", optional = true }
 gcloud-googleapis = { version = "1.2.0", optional = true }
+futures = { version = "0.3", optional = true }
 
 [dev-dependencies]
 testcontainers = { version = "0.24", features = ["blocking"] }
