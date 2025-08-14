@@ -3,15 +3,9 @@ extern crate cbindgen;
 use cbindgen::{Config, Language, MacroExpansionConfig};
 use std::env;
 use std::path::PathBuf;
-
 fn main() {
     #[cfg(feature = "ztcontroller")]
     {
-        // Ensure the `cbindgen` crate is available
-        cbindgen::generate("src/ext.rs")
-            .expect("Unable to generate bindings")
-            .write_to_file("rustybits.h");
-
         let mut prost_build = prost_build::Config::new();
 
         prost_build
