@@ -14,15 +14,20 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 #[cfg(feature = "ztcontroller")]
 use std::os::raw::c_void;
+#[cfg(feature = "ztcontroller")]
 use std::sync::Arc;
+#[cfg(feature = "ztcontroller")]
 use std::time::Duration;
 #[cfg(feature = "ztcontroller")]
 use tokio::runtime;
 use url::Url;
 
+#[cfg(feature = "ztcontroller")]
 static mut RT: Option<tokio::runtime::Runtime> = None;
 
+#[cfg(feature = "ztcontroller")]
 static START: std::sync::Once = std::sync::Once::new();
+#[cfg(feature = "ztcontroller")]
 static SHUTDOWN: std::sync::Once = std::sync::Once::new();
 
 #[cfg(feature = "ztcontroller")]

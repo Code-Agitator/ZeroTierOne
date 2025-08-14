@@ -5,20 +5,28 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    let mut prost_build = prost_build::Config::new();
+    #[cfg(feature = "ztcontroller")]
+    {
+        // Ensure the `cbindgen` crate is available
+        cbindgen::generate("src/ext.rs")
+            .expect("Unable to generate bindings")
+            .write_to_file("rustybits.h");
 
-    prost_build
-        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
-        .compile_protos(
-            &[
-                "src/pubsub/metadata.proto",
-                "src/pubsub/network.proto",
-                "src/pubsub/member.proto",
-                "src/pubsub/member_status.proto",
-            ],
-            &["src/pubsub/"],
-        )
-        .expect("Failed to compile protobuf files");
+        let mut prost_build = prost_build::Config::new();
+
+        prost_build
+            .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
+            .compile_protos(
+                &[
+                    "src/pubsub/metadata.proto",
+                    "src/pubsub/network.proto",
+                    "src/pubsub/member.proto",
+                    "src/pubsub/member_status.proto",
+                ],
+                &["src/pubsub/"],
+            )
+            .expect("Failed to compile protobuf files");
+    }
 
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 
