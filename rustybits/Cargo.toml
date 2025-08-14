@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["staticlib", "rlib"]
 
 [features]
-default = ["zeroidc", "ztcontroller"]
+default = ["zeroidc"]
 zeroidc = []
 ztcontroller = [
     "dep:serde",
