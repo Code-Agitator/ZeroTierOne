@@ -42,6 +42,7 @@ ONE_OBJS=\
 	controller/CtlUtil.o \
 	controller/CV1.o \
 	controller/CV2.o \
+	controller/PubSubListener.o \
 	osdep/EthernetTap.o \
 	osdep/ManagedRoute.o \
 	osdep/Http.o \
