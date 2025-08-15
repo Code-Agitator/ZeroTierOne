@@ -530,8 +530,7 @@ pub unsafe extern "C" fn network_listener_new(
     let id = unsafe { CStr::from_ptr(controller_id) }.to_str().unwrap();
 
     let rt = runtime::Handle::current();
-    let _block = rt.enter();
-    futures::executor::block_on(async {
+    rt.block_on(async {
         match NetworkListener::new(id, Duration::from_secs(listen_timeout), callback, user_ptr).await {
             Ok(listener) => Arc::into_raw(listener),
             Err(e) => {
@@ -563,9 +562,7 @@ pub unsafe extern "C" fn network_listener_listen(ptr: *const NetworkListener) ->
     let listener = ManuallyDrop::new(unsafe { Arc::from_raw(ptr) });
 
     let rt = runtime::Handle::current();
-    let _guard = rt.enter();
-
-    match futures::executor::block_on(listener.listen()) {
+    match rt.block_on(listener.listen()) {
         Ok(_) => {
             println!("Network listener started successfully");
             true
@@ -589,9 +586,7 @@ pub unsafe extern "C" fn network_listener_change_handler(ptr: *const NetworkList
     let listener = ManuallyDrop::new(unsafe { Arc::from_raw(ptr) });
 
     let rt = runtime::Handle::current();
-    let _guard = rt.enter();
-
-    match futures::executor::block_on(listener.change_handler()) {
+    match rt.block_on(listener.change_handler()) {
         Ok(_) => {
             println!("Network listener change listener completed successfully");
         }
@@ -621,8 +616,7 @@ pub unsafe extern "C" fn member_listener_new(
     let id = unsafe { CStr::from_ptr(controller_id) }.to_str().unwrap();
 
     let rt = runtime::Handle::current();
-    let _block = rt.enter();
-    futures::executor::block_on(async {
+    rt.block_on(async {
         match MemberListener::new(id, Duration::from_secs(listen_timeout), callback, user_ptr).await {
             Ok(listener) => Arc::into_raw(listener),
             Err(e) => {
@@ -653,8 +647,7 @@ pub unsafe extern "C" fn member_listener_listen(ptr: *const MemberListener) -> b
 
     let listener = ManuallyDrop::new(unsafe { Arc::from_raw(ptr) });
     let rt = runtime::Handle::current();
-    let _guard = rt.enter();
-    match futures::executor::block_on(listener.listen()) {
+    match rt.block_on(listener.listen()) {
         Ok(_) => {
             println!("Member listener started successfully");
             true
@@ -678,8 +671,7 @@ pub unsafe extern "C" fn member_listener_change_handler(ptr: *const MemberListen
     let listener = ManuallyDrop::new(unsafe { Arc::from_raw(ptr) });
 
     let rt = runtime::Handle::current();
-    let _guard = rt.enter();
-    match futures::executor::block_on(listener.change_handler()) {
+    match rt.block_on(listener.change_handler()) {
         Ok(_) => {
             println!("Member listener change listener completed successfully");
         }
