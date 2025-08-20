@@ -17,14 +17,14 @@ void listener_callback(void* user_ptr, const uint8_t* payload, uintptr_t length)
 	listener->onNotification(payload_str);
 }
 
-NetworkListener::NetworkListener(const char* controller_id, uint64_t listen_timeout, rustybits::NetworkListenerCallback callback) : _listener(nullptr)
+PubSubNetworkListener::PubSubNetworkListener(const char* controller_id, uint64_t listen_timeout, rustybits::NetworkListenerCallback callback) : _listener(nullptr)
 {
 	_listener = rustybits::network_listener_new(controller_id, listen_timeout, callback, this);
-	_listenThread = std::thread(&NetworkListener::listenThread, this);
-	_changeHandlerThread = std::thread(&NetworkListener::changeHandlerThread, this);
+	_listenThread = std::thread(&PubSubNetworkListener::listenThread, this);
+	_changeHandlerThread = std::thread(&PubSubNetworkListener::changeHandlerThread, this);
 }
 
-NetworkListener::~NetworkListener()
+PubSubNetworkListener::~PubSubNetworkListener()
 {
 	if (_listener) {
 		rustybits::network_listener_delete(_listener);
@@ -32,13 +32,13 @@ NetworkListener::~NetworkListener()
 	}
 }
 
-void NetworkListener::onNotification(const std::string& payload)
+void PubSubNetworkListener::onNotification(const std::string& payload)
 {
 	fprintf(stderr, "Network notification received: %s\n", payload.c_str());
 	// TODO: Implement the logic to handle network notifications
 }
 
-void NetworkListener::listenThread()
+void PubSubNetworkListener::listenThread()
 {
 	if (_listener) {
 		while (rustybits::network_listener_listen(_listener)) {
@@ -47,14 +47,14 @@ void NetworkListener::listenThread()
 	}
 }
 
-void NetworkListener::changeHandlerThread()
+void PubSubNetworkListener::changeHandlerThread()
 {
 	if (_listener) {
 		rustybits::network_listener_change_handler(_listener);
 	}
 }
 
-MemberListener::MemberListener(const char* controller_id, uint64_t listen_timeout, rustybits::NetworkListenerCallback callback) : _listener(nullptr)
+PubSubMemberListener::PubSubMemberListener(const char* controller_id, uint64_t listen_timeout, rustybits::NetworkListenerCallback callback) : _listener(nullptr)
 {
 	// Initialize the member listener with the provided controller ID and timeout
 	// The callback will be called when a member notification is received
@@ -63,7 +63,7 @@ MemberListener::MemberListener(const char* controller_id, uint64_t listen_timeou
 	}
 }
 
-MemberListener::~MemberListener()
+PubSubMemberListener::~PubSubMemberListener()
 {
 	if (_listener) {
 		rustybits::member_listener_delete(_listener);
@@ -71,14 +71,14 @@ MemberListener::~MemberListener()
 	}
 }
 
-void MemberListener::onNotification(const std::string& payload)
+void PubSubMemberListener::onNotification(const std::string& payload)
 {
 	fprintf(stderr, "Member notification received: %s\n", payload.c_str());
 
 	// TODO: Implement the logic to handle network notifications
 }
 
-void MemberListener::listenThread()
+void PubSubMemberListener::listenThread()
 {
 	if (_listener) {
 		while (rustybits::member_listener_listen(_listener)) {
@@ -87,7 +87,7 @@ void MemberListener::listenThread()
 	}
 }
 
-void MemberListener::changeHandlerThread()
+void PubSubMemberListener::changeHandlerThread()
 {
 	if (_listener) {
 		rustybits::member_listener_change_handler(_listener);

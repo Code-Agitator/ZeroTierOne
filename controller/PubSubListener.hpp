@@ -19,10 +19,10 @@ class PubSubListener {
 	virtual void onNotification(const std::string& payload) = 0;
 };
 
-class NetworkListener : public PubSubListener {
+class PubSubNetworkListener : public PubSubListener {
   public:
-	NetworkListener(const char* controller_id, uint64_t listen_timeout, rustybits::NetworkListenerCallback callback);
-	virtual ~NetworkListener();
+	PubSubNetworkListener(const char* controller_id, uint64_t listen_timeout, rustybits::NetworkListenerCallback callback);
+	virtual ~PubSubNetworkListener();
 
 	virtual void onNotification(const std::string& payload) override;
 
@@ -35,10 +35,10 @@ class NetworkListener : public PubSubListener {
 	std::thread _changeHandlerThread;
 };
 
-class MemberListener : public PubSubListener {
+class PubSubMemberListener : public PubSubListener {
   public:
-	MemberListener(const char* controller_id, uint64_t listen_timeout, rustybits::MemberListenerCallback callback);
-	virtual ~MemberListener();
+	PubSubMemberListener(const char* controller_id, uint64_t listen_timeout, rustybits::MemberListenerCallback callback);
+	virtual ~PubSubMemberListener();
 
 	virtual void onNotification(const std::string& payload) override;
 
