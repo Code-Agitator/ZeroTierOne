@@ -2847,7 +2847,17 @@ class OneServiceImpl : public OneService {
 					}
 					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr, ipvPref, mtu, capacity, enabled, linkMode, failoverToStr));
 				}
-				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"], "always"));
+				// Check for new field name first, fall back to legacy field name for backward compatibility
+				std::string linkSelectMethodStr;
+				if (customPolicy.contains("linkSelectMethod")) {
+					linkSelectMethodStr = OSUtils::jsonString(customPolicy["linkSelectMethod"], "always");
+				} else {
+					linkSelectMethodStr = OSUtils::jsonString(customPolicy["activeReselect"], "always");
+					if (customPolicy.contains("activeReselect")) {
+						fprintf(stderr, "warning: 'activeReselect' is deprecated, please use 'linkSelectMethod' instead in policy '%s'\n", customPolicyStr.c_str());
+					}
+				}
+				
 				if (linkSelectMethodStr == "always") {
 					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_ALWAYS);
 				}
