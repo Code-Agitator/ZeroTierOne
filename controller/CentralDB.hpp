@@ -26,6 +26,7 @@ struct PubSubConfig;
 struct PostgresNotifyConfig;
 
 struct ControllerConfig {
+	bool ssoEnabled;
 	RedisConfig* redisConfig;
 	PubSubConfig* pubSubConfig;
 	PostgresNotifyConfig* postgresNotifyConfig;
@@ -91,6 +92,7 @@ class CentralDB : public DB {
 	enum OverrideMode { ALLOW_PGBOUNCER_OVERRIDE = 0, NO_OVERRIDE = 1 };
 
 	ListenerMode _listenerMode;
+	ControllerConfig* _controllerConfig;
 	std::shared_ptr<ConnectionPool<PostgresConnection> > _pool;
 
 	const Identity _myId;

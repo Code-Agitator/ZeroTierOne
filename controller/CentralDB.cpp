@@ -53,6 +53,7 @@ using ItemStream = std::vector<Item>;
 CentralDB::CentralDB(const Identity& myId, const char* path, int listenPort, CentralDB::ListenerMode mode, ControllerConfig* cc)
 	: DB()
 	, _listenerMode(mode)
+	, _controllerConfig(cc)
 	, _pool()
 	, _myId(myId)
 	, _myAddress(myId.address())
@@ -391,187 +392,190 @@ void CentralDB::nodeIsOnline(const uint64_t networkId, const uint64_t memberId, 
 
 AuthInfo CentralDB::getSSOAuthInfo(const nlohmann::json& member, const std::string& redirectURL)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("CentralDB");
-	auto span = tracer->StartSpan("CentralDB::getSSOAuthInfo");
-	auto scope = tracer->WithActiveSpan(span);
+	if (_controllerConfig->ssoEnabled) {
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("CentralDB");
+		auto span = tracer->StartSpan("CentralDB::getSSOAuthInfo");
+		auto scope = tracer->WithActiveSpan(span);
 
-	Metrics::db_get_sso_info++;
-	// NONCE is just a random character string.  no semantic meaning
-	// state = HMAC SHA384 of Nonce based on shared sso key
-	//
-	// need nonce timeout in database? make sure it's used within X time
-	// X is 5 minutes for now.  Make configurable later?
-	//
-	// how do we tell when a nonce is used? if auth_expiration_time is set
-	std::string networkId = member["nwid"];
-	std::string memberId = member["id"];
+		Metrics::db_get_sso_info++;
+		// NONCE is just a random character string.  no semantic meaning
+		// state = HMAC SHA384 of Nonce based on shared sso key
+		//
+		// need nonce timeout in database? make sure it's used within X time
+		// X is 5 minutes for now.  Make configurable later?
+		//
+		// how do we tell when a nonce is used? if auth_expiration_time is set
+		std::string networkId = member["nwid"];
+		std::string memberId = member["id"];
 
-	char authenticationURL[4096] = { 0 };
-	AuthInfo info;
-	info.enabled = true;
+		char authenticationURL[4096] = { 0 };
+		AuthInfo info;
+		info.enabled = true;
 
-	// if (memberId == "a10dccea52" && networkId == "8056c2e21c24673d") {
-	//	fprintf(stderr, "invalid authinfo for grant's machine\n");
-	//	info.version=1;
-	//	return info;
-	// }
-	//  fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
-	std::shared_ptr<PostgresConnection> c;
-	try {
-		c = _pool->borrow();
-		pqxx::work w(*c->c);
+		// if (memberId == "a10dccea52" && networkId == "8056c2e21c24673d") {
+		//	fprintf(stderr, "invalid authinfo for grant's machine\n");
+		//	info.version=1;
+		//	return info;
+		// }
+		//  fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
+		std::shared_ptr<PostgresConnection> c;
+		try {
+			c = _pool->borrow();
+			pqxx::work w(*c->c);
 
-		char nonceBytes[16] = { 0 };
-		std::string nonce = "";
+			char nonceBytes[16] = { 0 };
+			std::string nonce = "";
 
-		// check if the member exists first.
-		pqxx::row count = w.exec_params1("SELECT count(id) FROM ztc_member WHERE id = $1 AND network_id = $2 AND deleted = false", memberId, networkId);
-		if (count[0].as<int>() == 1) {
-			// get active nonce, if exists.
-			pqxx::result r = w.exec_params(
-				"SELECT nonce FROM ztc_sso_expiry "
-				"WHERE network_id = $1 AND member_id = $2 "
-				"AND ((NOW() AT TIME ZONE 'UTC') <= authentication_expiry_time) AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
-				networkId,
-				memberId);
-
-			if (r.size() == 0) {
-				// no active nonce.
-				// find an unused nonce, if one exists.
+			// check if the member exists first.
+			pqxx::row count = w.exec_params1("SELECT count(id) FROM ztc_member WHERE id = $1 AND network_id = $2 AND deleted = false", memberId, networkId);
+			if (count[0].as<int>() == 1) {
+				// get active nonce, if exists.
 				pqxx::result r = w.exec_params(
 					"SELECT nonce FROM ztc_sso_expiry "
 					"WHERE network_id = $1 AND member_id = $2 "
-					"AND authentication_expiry_time IS NULL AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
+					"AND ((NOW() AT TIME ZONE 'UTC') <= authentication_expiry_time) AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
 					networkId,
 					memberId);
 
-				if (r.size() == 1) {
-					// we have an existing nonce.  Use it
-					nonce = r.at(0)[0].as<std::string>();
-					Utils::unhex(nonce.c_str(), nonceBytes, sizeof(nonceBytes));
-				}
-				else if (r.empty()) {
-					// create a nonce
-					Utils::getSecureRandom(nonceBytes, 16);
-					char nonceBuf[64] = { 0 };
-					Utils::hex(nonceBytes, sizeof(nonceBytes), nonceBuf);
-					nonce = std::string(nonceBuf);
-
-					pqxx::result ir = w.exec_params0(
-						"INSERT INTO ztc_sso_expiry "
-						"(nonce, nonce_expiration, network_id, member_id) VALUES "
-						"($1, TO_TIMESTAMP($2::double precision/1000), $3, $4)",
-						nonce,
-						OSUtils::now() + 300000,
+				if (r.size() == 0) {
+					// no active nonce.
+					// find an unused nonce, if one exists.
+					pqxx::result r = w.exec_params(
+						"SELECT nonce FROM ztc_sso_expiry "
+						"WHERE network_id = $1 AND member_id = $2 "
+						"AND authentication_expiry_time IS NULL AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
 						networkId,
 						memberId);
 
-					w.commit();
+					if (r.size() == 1) {
+						// we have an existing nonce.  Use it
+						nonce = r.at(0)[0].as<std::string>();
+						Utils::unhex(nonce.c_str(), nonceBytes, sizeof(nonceBytes));
+					}
+					else if (r.empty()) {
+						// create a nonce
+						Utils::getSecureRandom(nonceBytes, 16);
+						char nonceBuf[64] = { 0 };
+						Utils::hex(nonceBytes, sizeof(nonceBytes), nonceBuf);
+						nonce = std::string(nonceBuf);
+
+						pqxx::result ir = w.exec_params0(
+							"INSERT INTO ztc_sso_expiry "
+							"(nonce, nonce_expiration, network_id, member_id) VALUES "
+							"($1, TO_TIMESTAMP($2::double precision/1000), $3, $4)",
+							nonce,
+							OSUtils::now() + 300000,
+							networkId,
+							memberId);
+
+						w.commit();
+					}
+					else {
+						// > 1 ?!?  Thats an error!
+						fprintf(stderr, "> 1 unused nonce!\n");
+						exit(6);
+					}
+				}
+				else if (r.size() == 1) {
+					nonce = r.at(0)[0].as<std::string>();
+					Utils::unhex(nonce.c_str(), nonceBytes, sizeof(nonceBytes));
 				}
 				else {
-					// > 1 ?!?  Thats an error!
-					fprintf(stderr, "> 1 unused nonce!\n");
-					exit(6);
+					// more than 1 nonce in use?  Uhhh...
+					fprintf(stderr, "> 1 nonce in use for network member?!?\n");
+					exit(7);
 				}
-			}
-			else if (r.size() == 1) {
-				nonce = r.at(0)[0].as<std::string>();
-				Utils::unhex(nonce.c_str(), nonceBytes, sizeof(nonceBytes));
-			}
-			else {
-				// more than 1 nonce in use?  Uhhh...
-				fprintf(stderr, "> 1 nonce in use for network member?!?\n");
-				exit(7);
-			}
 
-			r = w.exec_params(
-				"SELECT oc.client_id, oc.authorization_endpoint, oc.issuer, oc.provider, oc.sso_impl_version "
-				"FROM ztc_network AS n "
-				"INNER JOIN ztc_org o "
-				"  ON o.owner_id = n.owner_id "
-				"LEFT OUTER JOIN ztc_network_oidc_config noc "
-				"  ON noc.network_id = n.id "
-				"LEFT OUTER JOIN ztc_oidc_config oc "
-				"  ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
-				"WHERE n.id = $1 AND n.sso_enabled = true",
-				networkId);
+				r = w.exec_params(
+					"SELECT oc.client_id, oc.authorization_endpoint, oc.issuer, oc.provider, oc.sso_impl_version "
+					"FROM ztc_network AS n "
+					"INNER JOIN ztc_org o "
+					"  ON o.owner_id = n.owner_id "
+					"LEFT OUTER JOIN ztc_network_oidc_config noc "
+					"  ON noc.network_id = n.id "
+					"LEFT OUTER JOIN ztc_oidc_config oc "
+					"  ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
+					"WHERE n.id = $1 AND n.sso_enabled = true",
+					networkId);
 
-			std::string client_id = "";
-			std::string authorization_endpoint = "";
-			std::string issuer = "";
-			std::string provider = "";
-			uint64_t sso_version = 0;
+				std::string client_id = "";
+				std::string authorization_endpoint = "";
+				std::string issuer = "";
+				std::string provider = "";
+				uint64_t sso_version = 0;
 
-			if (r.size() == 1) {
-				client_id = r.at(0)[0].as<std::optional<std::string> >().value_or("");
-				authorization_endpoint = r.at(0)[1].as<std::optional<std::string> >().value_or("");
-				issuer = r.at(0)[2].as<std::optional<std::string> >().value_or("");
-				provider = r.at(0)[3].as<std::optional<std::string> >().value_or("");
-				sso_version = r.at(0)[4].as<std::optional<uint64_t> >().value_or(1);
-			}
-			else if (r.size() > 1) {
-				fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n", networkId.c_str());
-			}
-			else {
-				fprintf(stderr, "No client or auth endpoint?!?\n");
-			}
-
-			info.version = sso_version;
-
-			// no catch all else because we don't actually care if no records exist here. just continue as normal.
-			if ((! client_id.empty()) && (! authorization_endpoint.empty())) {
-				uint8_t state[48];
-				HMACSHA384(_ssoPsk, nonceBytes, sizeof(nonceBytes), state);
-				char state_hex[256];
-				Utils::hex(state, 48, state_hex);
-
-				if (info.version == 0) {
-					char url[2048] = { 0 };
-					OSUtils::ztsnprintf(
-						url,
-						sizeof(authenticationURL),
-						"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redirect_uri=%s&nonce=%s&state=%s&client_id=%s",
-						authorization_endpoint.c_str(),
-						url_encode(redirectURL).c_str(),
-						nonce.c_str(),
-						state_hex,
-						client_id.c_str());
-					info.authenticationURL = std::string(url);
+				if (r.size() == 1) {
+					client_id = r.at(0)[0].as<std::optional<std::string> >().value_or("");
+					authorization_endpoint = r.at(0)[1].as<std::optional<std::string> >().value_or("");
+					issuer = r.at(0)[2].as<std::optional<std::string> >().value_or("");
+					provider = r.at(0)[3].as<std::optional<std::string> >().value_or("");
+					sso_version = r.at(0)[4].as<std::optional<uint64_t> >().value_or(1);
 				}
-				else if (info.version == 1) {
-					info.ssoClientID = client_id;
-					info.issuerURL = issuer;
-					info.ssoProvider = provider;
-					info.ssoNonce = nonce;
-					info.ssoState = std::string(state_hex) + "_" + networkId;
-					info.centralAuthURL = redirectURL;
+				else if (r.size() > 1) {
+					fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n", networkId.c_str());
+				}
+				else {
+					fprintf(stderr, "No client or auth endpoint?!?\n");
+				}
+
+				info.version = sso_version;
+
+				// no catch all else because we don't actually care if no records exist here. just continue as normal.
+				if ((! client_id.empty()) && (! authorization_endpoint.empty())) {
+					uint8_t state[48];
+					HMACSHA384(_ssoPsk, nonceBytes, sizeof(nonceBytes), state);
+					char state_hex[256];
+					Utils::hex(state, 48, state_hex);
+
+					if (info.version == 0) {
+						char url[2048] = { 0 };
+						OSUtils::ztsnprintf(
+							url,
+							sizeof(authenticationURL),
+							"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redirect_uri=%s&nonce=%s&state=%s&client_id=%s",
+							authorization_endpoint.c_str(),
+							url_encode(redirectURL).c_str(),
+							nonce.c_str(),
+							state_hex,
+							client_id.c_str());
+						info.authenticationURL = std::string(url);
+					}
+					else if (info.version == 1) {
+						info.ssoClientID = client_id;
+						info.issuerURL = issuer;
+						info.ssoProvider = provider;
+						info.ssoNonce = nonce;
+						info.ssoState = std::string(state_hex) + "_" + networkId;
+						info.centralAuthURL = redirectURL;
 #ifdef ZT_DEBUG
-					fprintf(
-						stderr,
-						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s\nprovider: %s\n",
-						info.ssoClientID.c_str(),
-						info.issuerURL.c_str(),
-						info.ssoNonce.c_str(),
-						info.ssoState.c_str(),
-						info.centralAuthURL.c_str(),
-						provider.c_str());
+						fprintf(
+							stderr,
+							"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s\nprovider: %s\n",
+							info.ssoClientID.c_str(),
+							info.issuerURL.c_str(),
+							info.ssoNonce.c_str(),
+							info.ssoState.c_str(),
+							info.centralAuthURL.c_str(),
+							provider.c_str());
 #endif
+					}
+				}
+				else {
+					fprintf(stderr, "client_id: %s\nauthorization_endpoint: %s\n", client_id.c_str(), authorization_endpoint.c_str());
 				}
 			}
-			else {
-				fprintf(stderr, "client_id: %s\nauthorization_endpoint: %s\n", client_id.c_str(), authorization_endpoint.c_str());
-			}
+
+			_pool->unborrow(c);
+		}
+		catch (std::exception& e) {
+			span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
+			fprintf(stderr, "ERROR: Error updating member on load for network %s: %s\n", networkId.c_str(), e.what());
 		}
 
-		_pool->unborrow(c);
+		return info;   // std::string(authenticationURL);
 	}
-	catch (std::exception& e) {
-		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
-		fprintf(stderr, "ERROR: Error updating member on load for network %s: %s\n", networkId.c_str(), e.what());
-	}
-
-	return info;   // std::string(authenticationURL);
+	return AuthInfo();
 }
 
 void CentralDB::initializeNetworks()
