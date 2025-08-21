@@ -55,7 +55,7 @@
 #define ZT_NETWORKCONFIG_FLAG_RULES_RESULT_OF_UNSUPPORTED_MATCH 0x0000000000000008ULL
 
 /**
- * Flag: disable frame compression
+ * Flag: disable frame compression (unused, now always disabled)
  */
 #define ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION 0x0000000000000010ULL
 
@@ -271,22 +271,6 @@ class NetworkConfig {
 	inline bool ndpEmulation() const
 	{
 		return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0);
-	}
-
-	/**
-	 * @return True if frames should not be compressed
-	 */
-	inline bool disableCompression() const
-	{
-#ifndef ZT_DISABLE_COMPRESSION
-		return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0);
-#else
-		/* Compression is disabled for libzt builds since it causes non-obvious chaotic
-		interference with lwIP's TCP congestion algorithm. Compression is also disabled
-		for some NAS builds due to the usage of low-performance processors in certain
-		older and budget models. */
-		return false;
-#endif
 	}
 
 	/**

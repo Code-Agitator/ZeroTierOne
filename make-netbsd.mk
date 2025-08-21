@@ -8,6 +8,15 @@ LIBS=
 include objects.mk
 OBJS+=osdep/NetBSDEthernetTap.o ext/lz4/lz4.o ext/json-parser/json.o ext/http-parser/http_parser.o
 
+ifeq ($(ZT_CONTROLLER),1)
+	ZT_NONFREE=1
+endif
+ifeq ($(ZT_NONFREE),1)
+	include objects-nonfree.mk
+	ONE_OBJS+=$(CONTROLLER_OBJS)
+	override DEFS += -DZT_NONFREE_CONTROLLER
+endif
+
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	DEFS+=-DZT_OFFICIAL_RELEASE

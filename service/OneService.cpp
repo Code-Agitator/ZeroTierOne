@@ -1258,11 +1258,13 @@ class OneServiceImpl : public OneService {
 			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
 
 			// Network controller is now enabled by default for desktop and server
+#ifdef ZT_NONFREE_CONTROLLER
 			_controller = new EmbeddedNetworkController(_node, _homePath.c_str(), _controllerDbPath.c_str(), _ports[0], _rc);
 			if (! _ssoRedirectURL.empty()) {
 				_controller->setSSORedirectURL(_ssoRedirectURL);
 			}
 			_node->setNetconfMaster((void*)_controller);
+#endif
 
 			startHTTPControlPlane();
 
@@ -2596,9 +2598,11 @@ class OneServiceImpl : public OneService {
 		_controlPlane.set_exception_handler(exceptionHandler);
 		_controlPlaneV6.set_exception_handler(exceptionHandler);
 
+#ifdef ZT_NONFREE_CONTROLLER
 		if (_controller) {
 			_controller->configureHTTPControlPlane(_controlPlane, _controlPlaneV6, setContent);
 		}
+#endif
 
 #ifndef ZT_EXTOSDEP
 		_controlPlane.set_pre_routing_handler(authCheck);
@@ -3649,9 +3653,11 @@ class OneServiceImpl : public OneService {
 			} break;
 
 			case ZT_EVENT_REMOTE_TRACE: {
+#ifdef ZT_NONFREE_CONTROLLER
 				const ZT_RemoteTrace* rt = reinterpret_cast<const ZT_RemoteTrace*>(metaData);
 				if ((rt) && (rt->len > 0) && (rt->len <= ZT_MAX_REMOTE_TRACE_SIZE) && (rt->data))
 					_controller->handleRemoteTrace(*rt);
+#endif
 			}
 
 			default:

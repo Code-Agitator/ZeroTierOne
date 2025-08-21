@@ -7,6 +7,15 @@ LIBS=
 include objects.mk
 ONE_OBJS+=osdep/BSDEthernetTap.o ext/http-parser/http_parser.o
 
+ifeq ($(ZT_CONTROLLER),1)
+	ZT_NONFREE=1
+endif
+ifeq ($(ZT_NONFREE),1)
+	include objects-nonfree.mk
+	ONE_OBJS+=$(CONTROLLER_OBJS)
+	override DEFS += -DZT_NONFREE_CONTROLLER
+endif
+
 ifeq ($(OSTYPE),FreeBSD)
 	# Auto-detect miniupnpc and nat-pmp as well and use ports libs if present,
 	# otherwise build into binary as done on Mac and Windows.

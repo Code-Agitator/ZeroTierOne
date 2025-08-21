@@ -31,9 +31,16 @@ include objects.mk
 ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o osdep/MacDNSHelper.o ext/http-parser/http_parser.o
 LIBS+=-framework CoreServices -framework SystemConfiguration -framework CoreFoundation -framework Security
 
-# Official releases are signed with our Apple cert and apply software updates by default
+ifeq ($(ZT_CONTROLLER),1)
+	ZT_NONFREE=1
+endif
+ifeq ($(ZT_NONFREE),1)
+	include objects-nonfree.mk
+	ONE_OBJS+=$(CONTROLLER_OBJS)
+	override DEFS += -DZT_NONFREE_CONTROLLER
+endif
+
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"apply\""
 	ZT_USE_MINIUPNPC=1
 	CODESIGN=codesign
 	PRODUCTSIGN=productsign
@@ -42,23 +49,21 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	NOTARIZE=xcrun notarytool
 	NOTARIZE_APPLE_ID="adam.ierymenko@gmail.com"
 	NOTARIZE_TEAM_ID="8ZD9JUCZ4V"
-else
-	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"download\""
 endif
 
 # Use fast ASM Salsa20/12 for x64 processors
-DEFS+=-DZT_USE_X64_ASM_SALSA2012
+override DEFS+=-DZT_USE_X64_ASM_SALSA2012
 CORE_OBJS+=ext/x64-salsa2012-asm/salsa2012.o
 CXXFLAGS=$(CFLAGS) -std=c++17 -stdlib=libc++
 
 # Build miniupnpc and nat-pmp as included libraries -- extra defs are required for these sources
-DEFS+=-DMACOSX -DZT_SSO_SUPPORTED -DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -D_DARWIN_C_SOURCE -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -DOS_STRING=\"Darwin/15.0.0\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+override DEFS+=-DMACOSX -DZT_SSO_SUPPORTED -DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -D_DARWIN_C_SOURCE -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -DOS_STRING=\"Darwin/15.0.0\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
 ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o osdep/PortMapper.o
 ifeq ($(ZT_CONTROLLER),1)
 	MACOS_VERSION_MIN=10.15
 	override CXXFLAGS=$(CFLAGS) -std=c++17 -stdlib=libc++
 	LIBS+=-L/opt/homebrew/lib -L/usr/local/opt/libpqxx/lib -L/usr/local/opt/libpq/lib -L/usr/local/opt/openssl/lib/ -lpqxx -lpq -lssl -lcrypto -lgssapi_krb5 ext/redis-plus-plus-1.1.1/install/macos/lib/libredis++.a ext/hiredis-0.14.1/lib/macos/libhiredis.a rustybits/target/libsmeeclient.a
-	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER_USE_REDIS -DZT_CONTROLLER
+	override DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER_USE_REDIS -DZT_CONTROLLER
 	INCLUDES+=-I/opt/homebrew/include -I/opt/homebrew/opt/libpq/include -I/usr/local/opt/libpq/include -I/usr/local/opt/libpqxx/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/macos/include/sw/ -Irustybits/target/
 else
 	MACOS_VERSION_MIN=10.13
@@ -66,10 +71,10 @@ endif
 
 # Build with address sanitization library for advanced debugging (clang)
 ifeq ($(ZT_SANITIZE),1)
-	DEFS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
+	override DEFS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
 endif
 ifeq ($(ZT_DEBUG_TRACE),1)
-	DEFS+=-DZT_DEBUG_TRACE
+	override DEFS+=-DZT_DEBUG_TRACE
 endif
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
@@ -91,15 +96,15 @@ else
 endif
 
 ifeq ($(ZT_TRACE),1)
-	DEFS+=-DZT_TRACE
+	override DEFS+=-DZT_TRACE
 endif
 
 ifeq ($(ZT_DEBUG),1)
-	DEFS+=-DZT_DEBUG
+	override DEFS+=-DZT_DEBUG
 endif
 
 ifeq ($(ZT_VAULT_SUPPORT),1)
-	DEFS+=-DZT_VAULT_SUPPORT=1
+	override DEFS+=-DZT_VAULT_SUPPORT=1
 	LIBS+=-lcurl
 endif
 
@@ -169,10 +174,6 @@ libzerotiercore.a:	$(CORE_OBJS)
 	ranlib libzerotiercore.a
 
 core: libzerotiercore.a
-
-#cli:	FORCE
-#	$(CXX) $(CXXFLAGS) -o zerotier cli/zerotier.cpp osdep/OSUtils.cpp node/InetAddress.cpp node/Utils.cpp node/Salsa20.cpp node/Identity.cpp node/SHA512.cpp node/C25519.cpp -lcurl
-#	$(STRIP) zerotier
 
 selftest: $(CORE_OBJS) $(ONE_OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(CORE_OBJS) $(ONE_OBJS) $(LIBS) rustybits/target/libzeroidc.a

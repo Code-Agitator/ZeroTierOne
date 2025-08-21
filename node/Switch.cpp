@@ -550,9 +550,6 @@ void Switch::onLocalEthernet(void* tPtr, const SharedPtr<Network>& network, cons
 			outp.append(network->id());
 			outp.append((uint16_t)etherType);
 			outp.append(data, len);
-			// 1.4.8: disable compression for unicast as it almost never helps
-			// if (!network->config().disableCompression())
-			//	outp.compress();
 			aqm_enqueue(tPtr, network, outp, true, qosBucket, network->id(), flowId);
 		}
 		else {
@@ -563,9 +560,6 @@ void Switch::onLocalEthernet(void* tPtr, const SharedPtr<Network>& network, cons
 			from.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(data, len);
-			// 1.4.8: disable compression for unicast as it almost never helps
-			// if (!network->config().disableCompression())
-			//	outp.compress();
 			aqm_enqueue(tPtr, network, outp, true, qosBucket, network->id(), flowId);
 		}
 	}
@@ -627,9 +621,6 @@ void Switch::onLocalEthernet(void* tPtr, const SharedPtr<Network>& network, cons
 				from.appendTo(outp);
 				outp.append((uint16_t)etherType);
 				outp.append(data, len);
-				// 1.4.8: disable compression for unicast as it almost never helps
-				// if (!network->config().disableCompression())
-				//	outp.compress();
 				aqm_enqueue(tPtr, network, outp, true, qosBucket, network->id(), flowId);
 			}
 			else {

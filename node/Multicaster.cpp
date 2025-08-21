@@ -181,9 +181,7 @@ void Multicaster::send(void* tPtr, int64_t now, const SharedPtr<Network>& networ
 					outp.append((uint32_t)mg.adi());
 					outp.append((uint16_t)etherType);
 					outp.append(data, len);
-					if (! network->config().disableCompression()) {
-						outp.compress();
-					}
+					outp.compress();
 					outp.armor(bestMulticastReplicator->key(), true, false, bestMulticastReplicator->aesKeysIfSupported(), bestMulticastReplicator->identity());
 					Metrics::pkt_multicast_frame_out++;
 					bestMulticastReplicatorPath->send(RR, tPtr, outp.data(), outp.size(), now);
@@ -227,7 +225,7 @@ void Multicaster::send(void* tPtr, int64_t now, const SharedPtr<Network>& networ
 				RR,
 				now,
 				network->id(),
-				network->config().disableCompression(),
+				false,
 				limit,
 				1,	 // we'll still gather a little from peers to keep multicast list fresh
 				src,
@@ -315,7 +313,7 @@ void Multicaster::send(void* tPtr, int64_t now, const SharedPtr<Network>& networ
 			gs.txQueue.push_back(OutboundMulticast());
 			OutboundMulticast& out = gs.txQueue.back();
 
-			out.init(RR, now, network->id(), network->config().disableCompression(), limit, gatherLimit, src, mg, etherType, data, len);
+			out.init(RR, now, network->id(), false, limit, gatherLimit, src, mg, etherType, data, len);
 
 			if (origin) {
 				out.logAsSent(origin);
