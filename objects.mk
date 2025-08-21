@@ -42,7 +42,10 @@ ONE_OBJS=\
 	controller/CtlUtil.o \
 	controller/CV1.o \
 	controller/CV2.o \
+	controller/CentralDB.o \
 	controller/PubSubListener.o \
+	controller/RedisListener.o \
+	controller/PostgreSQL.o \
 	osdep/EthernetTap.o \
 	osdep/ManagedRoute.o \
 	osdep/Http.o \

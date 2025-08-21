@@ -3,6 +3,7 @@
 #ifndef ZT_CONTROLLER_PUBSUBLISTENER_HPP
 #define ZT_CONTROLLER_PUBSUBLISTENER_HPP
 
+#include "NotificationListener.hpp"
 #include "rustybits.h"
 
 #include <memory>
@@ -10,7 +11,17 @@
 #include <thread>
 
 namespace ZeroTier {
-class PubSubListener {
+class DB;
+
+struct PubSubConfig {
+	const char* controller_id;
+	uint64_t listen_timeout;
+};
+
+/**
+ * Base class for GCP PubSub listeners
+ */
+class PubSubListener : public NotificationListener {
   public:
 	virtual ~PubSubListener()
 	{
@@ -19,9 +30,12 @@ class PubSubListener {
 	virtual void onNotification(const std::string& payload) = 0;
 };
 
+/**
+ * Listener for network notifications via GCP PubSub
+ */
 class PubSubNetworkListener : public PubSubListener {
   public:
-	PubSubNetworkListener(const char* controller_id, uint64_t listen_timeout, rustybits::NetworkListenerCallback callback);
+	PubSubNetworkListener(std::string controller_id, uint64_t listen_timeout, DB* db);
 	virtual ~PubSubNetworkListener();
 
 	virtual void onNotification(const std::string& payload) override;
@@ -30,14 +44,20 @@ class PubSubNetworkListener : public PubSubListener {
 	void listenThread();
 	void changeHandlerThread();
 
+	bool _run = false;
+	std::string _controller_id;
+	DB* _db;
 	const rustybits::NetworkListener* _listener;
 	std::thread _listenThread;
 	std::thread _changeHandlerThread;
 };
 
+/**
+ * Listener for member notifications via GCP PubSub
+ */
 class PubSubMemberListener : public PubSubListener {
   public:
-	PubSubMemberListener(const char* controller_id, uint64_t listen_timeout, rustybits::MemberListenerCallback callback);
+	PubSubMemberListener(std::string controller_id, uint64_t listen_timeout, DB* db);
 	virtual ~PubSubMemberListener();
 
 	virtual void onNotification(const std::string& payload) override;
@@ -46,6 +66,9 @@ class PubSubMemberListener : public PubSubListener {
 	void listenThread();
 	void changeHandlerThread();
 
+	bool _run = false;
+	std::string _controller_id;
+	DB* _db;
 	const rustybits::MemberListener* _listener;
 	std::thread _listenThread;
 	std::thread _changeHandlerThread;

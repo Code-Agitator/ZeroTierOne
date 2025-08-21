@@ -64,13 +64,6 @@ class CV1 : public DB {
 		return _ready == 2;
 	}
 
-  protected:
-	struct _PairHasher {
-		inline std::size_t operator()(const std::pair<uint64_t, uint64_t>& p) const
-		{
-			return (std::size_t)(p.first ^ p.second);
-		}
-	};
 	virtual void _memberChanged(nlohmann::json& old, nlohmann::json& memberConfig, bool notifyListeners)
 	{
 		DB::_memberChanged(old, memberConfig, notifyListeners);
@@ -80,6 +73,14 @@ class CV1 : public DB {
 	{
 		DB::_networkChanged(old, networkConfig, notifyListeners);
 	}
+
+  protected:
+	struct _PairHasher {
+		inline std::size_t operator()(const std::pair<uint64_t, uint64_t>& p) const
+		{
+			return (std::size_t)(p.first ^ p.second);
+		}
+	};
 
   private:
 	void initializeNetworks();

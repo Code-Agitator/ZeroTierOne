@@ -145,6 +145,9 @@ class DB {
 		_changeListeners.push_back(listener);
 	}
 
+	virtual void _memberChanged(nlohmann::json& old, nlohmann::json& memberConfig, bool notifyListeners);
+	virtual void _networkChanged(nlohmann::json& old, nlohmann::json& networkConfig, bool notifyListeners);
+
   protected:
 	static inline bool _compareRecords(const nlohmann::json& a, const nlohmann::json& b)
 	{
@@ -181,8 +184,6 @@ class DB {
 		std::shared_mutex lock;
 	};
 
-	virtual void _memberChanged(nlohmann::json& old, nlohmann::json& memberConfig, bool notifyListeners);
-	virtual void _networkChanged(nlohmann::json& old, nlohmann::json& networkConfig, bool notifyListeners);
 	void _fillSummaryInfo(const std::shared_ptr<_Network>& nw, NetworkSummaryInfo& info);
 
 	std::vector<DB::ChangeListener*> _changeListeners;

@@ -1,42 +1,46 @@
-/*
- * Copyright (c)2025 ZeroTier, Inc.
- *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
- */
-/****/
-
-#include "DB.hpp"
-
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 
-#ifndef ZT_CONTROLLER_CV2_HPP
-#define ZT_CONTROLLER_CV2_HPP
+#ifndef ZT_CONTROLLER_CENTRAL_DB_HPP
+#define ZT_CONTROLLER_CENTRAL_DB_HPP
 
 #define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 4
 
 #include "../node/Metrics.hpp"
 #include "ConnectionPool.hpp"
+#include "DB.hpp"
+#include "NotificationListener.hpp"
 #include "PostgreSQL.hpp"
 
 #include <memory>
 #include <pqxx/pqxx>
 #include <redis++/redis++.h>
 
+namespace rustybits {
+struct SmeeClient;
+}
+
 namespace ZeroTier {
 
-class CV2 : public DB {
-	friend class MemberNotificationReceiver<CV2>;
-	friend class NetworkNotificationReceiver<CV2>;
+struct RedisConfig;
+struct PubSubConfig;
+struct PostgresNotifyConfig;
 
+struct ControllerConfig {
+	RedisConfig* redisConfig;
+	PubSubConfig* pubSubConfig;
+	PostgresNotifyConfig* postgresNotifyConfig;
+};
+
+class CentralDB : public DB {
   public:
-	CV2(const Identity& myId, const char* path, int listenPort);
-	virtual ~CV2();
+	enum ListenerMode {
+		LISTENER_MODE_PGSQL = 0,
+		LISTENER_MODE_REDIS = 1,
+		LISTENER_MODE_PUBSUB = 2,
+	};
+
+	CentralDB(const Identity& myId, const char* path, int listenPort, CentralDB::ListenerMode mode, ControllerConfig* cc);
+	virtual ~CentralDB();
 
 	virtual bool waitForReady();
 	virtual bool isReady();
@@ -52,9 +56,15 @@ class CV2 : public DB {
 		return _ready == 2;
 	}
 
-	virtual void _memberChanged(nlohmann::json& old, nlohmann::json& memberConfig, bool notifyListeners);
+	virtual void _memberChanged(nlohmann::json& old, nlohmann::json& memberConfig, bool notifyListeners)
+	{
+		DB::_memberChanged(old, memberConfig, notifyListeners);
+	}
 
-	virtual void _networkChanged(nlohmann::json& old, nlohmann::json& networkConfig, bool notifyListeners);
+	virtual void _networkChanged(nlohmann::json& old, nlohmann::json& networkConfig, bool notifyListeners)
+	{
+		DB::_networkChanged(old, networkConfig, notifyListeners);
+	}
 
   protected:
 	struct _PairHasher {
@@ -68,16 +78,19 @@ class CV2 : public DB {
 	void initializeNetworks();
 	void initializeMembers();
 	void heartbeat();
-	void membersDbWatcher();
-	void networksDbWatcher();
 
 	void commitThread();
 	void onlineNotificationThread();
+	void onlineNotification_Postgres();
+	void onlineNotification_Redis();
+	uint64_t _doRedisUpdate(sw::redis::Transaction& tx, std::string& controllerId, std::unordered_map<std::pair<uint64_t, uint64_t>, NodeOnlineRecord, _PairHasher>& lastOnline);
 
-	// void notifyNewMember(const std::string &networkID, const std::string &memberID);
+	void configureSmee();
+	void notifyNewMember(const std::string& networkID, const std::string& memberID);
 
 	enum OverrideMode { ALLOW_PGBOUNCER_OVERRIDE = 0, NO_OVERRIDE = 1 };
 
+	ListenerMode _listenerMode;
 	std::shared_ptr<ConnectionPool<PostgresConnection> > _pool;
 
 	const Identity _myId;
@@ -88,8 +101,8 @@ class CV2 : public DB {
 	BlockingQueue<std::pair<nlohmann::json, bool> > _commitQueue;
 
 	std::thread _heartbeatThread;
-	std::thread _membersDbWatcher;
-	std::thread _networksDbWatcher;
+	std::shared_ptr<NotificationListener> _membersDbWatcher;
+	std::shared_ptr<NotificationListener> _networksDbWatcher;
 	std::thread _commitThread[ZT_CENTRAL_CONTROLLER_COMMIT_THREADS];
 	std::thread _onlineNotificationThread;
 
@@ -102,9 +115,16 @@ class CV2 : public DB {
 
 	int _listenPort;
 	uint8_t _ssoPsk[48];
+
+	RedisConfig* _rc;
+	std::shared_ptr<sw::redis::Redis> _redis;
+	std::shared_ptr<sw::redis::RedisCluster> _cluster;
+	bool _redisMemberStatus;
+
+	rustybits::SmeeClient* _smee;
 };
 
 }	// namespace ZeroTier
 
-#endif	 // ZT_CONTROLLER_CV2_HPP
+#endif	 // ZT_CONTROLLER_CENTRAL_DB_HPP
 #endif	 // ZT_CONTROLLER_USE_LIBPQ

@@ -18,6 +18,7 @@
 
 #include "ConnectionPool.hpp"
 #include "DB.hpp"
+#include "NotificationListener.hpp"
 #include "opentelemetry/trace/provider.h"
 
 #include <memory>
@@ -186,6 +187,67 @@ struct NodeOnlineRecord {
 	uint64_t lastSeen;
 	InetAddress physicalAddress;
 	std::string osArch;
+};
+
+/**
+ * internal class for listening to PostgreSQL notification channels.
+ */
+template <typename T> class _notificationReceiver : public pqxx::notification_receiver {
+  public:
+	_notificationReceiver(T* p, pqxx::connection& c, const std::string& channel) : pqxx::notification_receiver(c, channel), _listener(p)
+	{
+		fprintf(stderr, "initialize PostgresMemberNotificationListener::_notificationReceiver\n");
+	}
+
+	virtual void operator()(const std::string& payload, int backendPid)
+	{
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("notification_receiver");
+		auto span = tracer->StartSpan("notification_receiver::operator()");
+		auto scope = tracer->WithActiveSpan(span);
+		_listener->onNotification(payload);
+	}
+
+  private:
+	T* _listener;
+};
+
+class PostgresMemberListener : public NotificationListener {
+  public:
+	PostgresMemberListener(DB* db, std::shared_ptr<ConnectionPool<PostgresConnection> > pool, const std::string& channel, uint64_t timeout);
+	virtual ~PostgresMemberListener();
+
+	virtual void listen();
+
+	virtual void onNotification(const std::string& payload) override;
+
+  private:
+	bool _run = false;
+	DB* _db;
+	std::shared_ptr<ConnectionPool<PostgresConnection> > _pool;
+	std::shared_ptr<PostgresConnection> _conn;
+	uint64_t _notification_timeout;
+	std::thread _listenerThread;
+	_notificationReceiver<PostgresMemberListener>* _receiver;
+};
+
+class PostgresNetworkListener : public NotificationListener {
+  public:
+	PostgresNetworkListener(DB* db, std::shared_ptr<ConnectionPool<PostgresConnection> > pool, const std::string& channel, uint64_t timeout);
+	virtual ~PostgresNetworkListener();
+
+	virtual void listen();
+
+	virtual void onNotification(const std::string& payload) override;
+
+  private:
+	bool _run = false;
+	DB* _db;
+	std::shared_ptr<ConnectionPool<PostgresConnection> > _pool;
+	std::shared_ptr<PostgresConnection> _conn;
+	uint64_t _notification_timeout;
+	std::thread _listenerThread;
+	_notificationReceiver<PostgresNetworkListener>* _receiver;
 };
 
 }	// namespace ZeroTier
