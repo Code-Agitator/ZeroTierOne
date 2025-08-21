@@ -123,7 +123,7 @@ MacEthernetTap::MacEthernetTap(
 					args[1] = p->ifa_name;
 					args[2] = "destroy";
 					args[3] = (char*)0;
-					const pid_t pid = vfork();
+					const pid_t pid = fork();
 					if (pid == 0) {
 						execv(args[0], const_cast<char**>(args));
 						_exit(-1);
@@ -255,7 +255,7 @@ MacEthernetTap::~MacEthernetTap()
 	args[1] = _dev.c_str();
 	args[2] = "destroy";
 	args[3] = (char*)0;
-	pid0 = vfork();
+	pid0 = fork();
 	if (pid0 == 0) {
 		execv(args[0], const_cast<char**>(args));
 		_exit(-1);
@@ -266,7 +266,7 @@ MacEthernetTap::~MacEthernetTap()
 	args[1] = tmp;
 	// args[2] = "destroy";
 	// args[3] = (char *)0;
-	pid1 = vfork();
+	pid1 = fork();
 	if (pid1 == 0) {
 		execv(args[0], const_cast<char**>(args));
 		_exit(-1);

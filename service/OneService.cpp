@@ -1294,7 +1294,6 @@ class OneServiceImpl : public OneService {
 			_lastRestart = clockShouldBe;
 			int64_t lastTapMulticastGroupCheck = 0;
 			int64_t lastBindRefresh = 0;
-			int64_t lastUpdateCheck = clockShouldBe;
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalConfFileCheck = OSUtils::now();
 			int64_t lastOnline = lastLocalConfFileCheck;
@@ -1798,7 +1797,7 @@ class OneServiceImpl : public OneService {
 					if (match.matched) {
 						// fallback
 						char indexHtmlPath[16384];
-						sprintf(indexHtmlPath, "%s/%s/%s", appUiDir, match.str().c_str(), "index.html");
+						snprintf(indexHtmlPath, sizeof(indexHtmlPath), "%s/%s/%s", appUiDir, match.str().c_str(), "index.html");
 						// fprintf(stderr, "fallback path %s\n", indexHtmlPath);
 
 						std::string indexHtml;
@@ -1822,7 +1821,7 @@ class OneServiceImpl : public OneService {
 					// add .html
 					std::string htmlFile;
 					char htmlPath[16384];
-					sprintf(htmlPath, "%s%s%s", appUiDir, (req.path).substr(appUiPath.length()).c_str(), ".html");
+					snprintf(htmlPath, sizeof(htmlPath), "%s%s%s", appUiDir, (req.path).substr(appUiPath.length()).c_str(), ".html");
 					// fprintf(stderr, "path: %s\n", htmlPath);
 					if (OSUtils::readFile(htmlPath, htmlFile)) {
 						res.set_content(htmlFile.c_str(), "text/html");

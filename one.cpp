@@ -1191,14 +1191,14 @@ static int cli(int argc, char** argv)
 		UInt8 path[PATH_MAX];
 		if (FSFindFolder(kUserDomain, kDesktopFolderType, kDontCreateFolder, &fsref) == noErr && FSRefMakePath(&fsref, path, sizeof(path)) == noErr) {}
 		else if (getenv("SUDO_USER")) {
-			sprintf((char*)path, "/Users/%s/Desktop", getenv("SUDO_USER"));
+			snprintf((char*)path, sizeof(path), "/Users/%s/Desktop", getenv("SUDO_USER"));
 		}
 		else {
 			fprintf(stdout, "%s", dump.str().c_str());
 			return 0;
 		}
 
-		sprintf((char*)path, "%s%szerotier_dump.txt", (char*)path, ZT_PATH_SEPARATOR_S);
+		snprintf((char*)path, sizeof(path), "%s%szerotier_dump.txt", (char*)path, ZT_PATH_SEPARATOR_S);
 
 		fprintf(stdout, "Writing dump to: %s\n", path);
 		int fd = open((char*)path, O_CREAT | O_RDWR, 0664);
@@ -1235,8 +1235,9 @@ static int cli(int argc, char** argv)
 				dump << "MTU: " << curAddr->Mtu << ZT_EOL_S;
 				dump << "MAC: ";
 				char macBuffer[64] = {};
-				sprintf(
+				snprintf(
 					macBuffer,
+					sizeof(macBuffer),
 					"%02x:%02x:%02x:%02x:%02x:%02x",
 					curAddr->PhysicalAddress[0],
 					curAddr->PhysicalAddress[1],
@@ -1271,7 +1272,7 @@ static int cli(int argc, char** argv)
 
 		char path[MAX_PATH + 1] = {};
 		if (SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, path) == S_OK) {
-			sprintf(path, "%s%szerotier_dump.txt", path, ZT_PATH_SEPARATOR_S);
+			snprintf(path, sizeof(path), "%s%szerotier_dump.txt", path, ZT_PATH_SEPARATOR_S);
 			fprintf(stdout, "Writing dump to: %s\n", path);
 			HANDLE file = CreateFileA(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 			if (file == INVALID_HANDLE_VALUE) {
@@ -1317,7 +1318,7 @@ static int cli(int argc, char** argv)
 						unsigned char mac_addr[6];
 						memcpy(mac_addr, ifr.ifr_hwaddr.sa_data, 6);
 						char macStr[18];
-						sprintf(macStr, "%02x:%02x:%02x:%02x:%02x:%02x", mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+						snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x", mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
 						dump << "MAC: " << macStr << ZT_EOL_S;
 					}
 
@@ -1348,7 +1349,7 @@ static int cli(int argc, char** argv)
 		close(sock);
 		char cwd[16384];
 		getcwd(cwd, sizeof(cwd));
-		sprintf(cwd, "%s%szerotier_dump.txt", cwd, ZT_PATH_SEPARATOR_S);
+		snprintf(cwd, sizeof(cwd), "%s%szerotier_dump.txt", cwd, ZT_PATH_SEPARATOR_S);
 		fprintf(stdout, "Writing dump to: %s\n", cwd);
 		int fd = open(cwd, O_CREAT | O_RDWR, 0664);
 		if (fd == -1) {
