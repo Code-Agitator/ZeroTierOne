@@ -1,22 +1,28 @@
 ZeroTier Release Notes
 ======
 
-## 2025-07-XX -- Version 1.16.0
+## 2025-08-21 -- Version 1.16.0
 
-  * Network-Specific Relays
-    * It is now possible to designate one or more nodes as network-specific relays to be used in preference to roots for relayed traffic between members of a network. These nodes need not necessarily be members of the network.
-    * "Moons" are now removed in favor of network-specific relays. They have been considered deprecated and not recommended for over a year.
   * License Changes
     * The core (`node/` and `include/`) and the service (`service/` and `osdep/`) are now under the Mozilla Public License (MPL).
-    * The network controller (`controller/`) remains under the BUSL with a commercial use restriction and *is not built into the service by default*. Building this into the service changes the license -- `zerotier-one` built with the controller is BUSL licensed, not MPL, but without the controller it is MPL (an OSI compatible license).
-  * HELLO packets are now encrypted by default -- they do not contain any secret data, just version and public keys, but in some cases them being sent in plaintext violated reqirements.
+    * The network controller (`controller/`) is now under a commercial source-available license.
+    * Use `make ZT_NONFREE=1` to build non-MPL components.
+    * Building with `ZT_NONFREE=1` changes the license of the resulting executable to a proprietary commercial license vs. MPL.
+  * Default binary builds no longer contain the controller.
+  * Network-Specific Relays (preview / beta)
+    * It is now possible to designate one or more nodes as network-specific relays to be used in preference to roots for relayed traffic between members of a network. These nodes need not necessarily be members of the network.
+    * "Moons" are now considered even more extra *deprecated* and should not be used in new deployments.
+    * We will announce support for network-specific relays once we have worked with some users to test and performed more internal validation.
+  * HELLO packet encryption is now available by enabling the `encryptedHelloEnabled` settting in `local.conf`.
+    * HELLO packets contain no data, only public keys and very basic meta-data like protocol version information.
+    * Most users won't care about this, but if you require this for e.g. compliance reasons you can enable. This adds a small amount of CPU and bandwidth overhead to the HELLO sign-on process.
   * Small Fixes
     * Code has been reformatted using `clang-format` with a `.clang-format` definition in the repo. Typing `make clang-format` executes this against all main core and service C++ files.
     * Bridges are no longer counted toward multicast limits.
     * A flow designation issue in bridged traffic under multipath scenarios has been fixed.
     * Library version updates for OIDC and other features.
-    * Repository cleanup.
     * Antiquated and unused software update code removed for precautionary reasons.
+    * Compiler warnings removed through removing use of deprecated functions on some platforms.
     * Other minor bug fixes.
 
 ----
