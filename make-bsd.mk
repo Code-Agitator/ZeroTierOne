@@ -1,6 +1,6 @@
 # This requires GNU make, which is typically "gmake" on BSD systems
 
-INCLUDES=-isystem ext -Iext/prometheus-cpp-lite-1.0/core/include -Iext/prometheus-cpp-lite-1.0/simpleapi/include
+INCLUDES=-isystem ext -Iext/prometheus-cpp-lite-1.0/core/include -Iext/prometheus-cpp-lite-1.0/simpleapi/include -Iext/opentelemetry-cpp-api-only/include
 DEFS=
 LIBS=
 

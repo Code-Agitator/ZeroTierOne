@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 
-INCLUDES=
+INCLUDES=-Iext/opentelemetry-cpp-api-only/include
 DEFS=
 LIBS=
 
