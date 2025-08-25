@@ -1,62 +1,65 @@
 syntax = "proto3";
 
-import "metadata.proto";
-
 package pbmessages;
 
-message IPRange {
-    string start_ip = 1; // Start of the IP range
-    string end_ip = 2;   // End of the IP range
-}
-
-message Route {
-    string target = 1; // Target IP or network
-    optional string via = 2; // Optional next hop IP
-}
-
-message DNS {
-    string domain = 1; // Search domain
-    repeated string nameservers = 2; // List of nameservers
-}
-
-message IPV4AssignMode {
-    bool zt = 1; // Whether ZeroTier is used for IPv4 assignment
-}
-
-message IPv6AssignMode {
-    bool six_plane = 1; // Whether 6plane is used for IPv6 assignment
-    bool rfc4193 = 2; // Whether RFC 4193 is used for IPv6 assignment
-    bool zt = 3; // Whether ZeroTier is used for IPv6 assignment
-}
-
-message Network {
-    string network_id = 1;
-    string capabilities = 2; // JSON string of capabilities
-    uint64 creation_time = 3; // Unix timestamp in milliseconds
-    bool enable_broadcast = 4; // Whether broadcast is enabled
-    repeated IPRange assignment_pools = 5; // List of IP ranges for assignment
-    uint32 mtu = 6; // Maximum Transmission Unit
-    uint32 multicast_limit = 7; // Limit for multicast messages
-    optional string name = 8; // Name of the network
-    bool is_private = 9; // Whether the network is private
-    uint32 remote_trace_level = 10; // Remote trace level
-    optional string remote_trace_target = 11; // Remote trace target
-    uint64 revision = 12; // Revision number
-    repeated Route routes = 13; // List of routes
-    string rules = 14; // JSON string of rules
-    optional string tags = 15; // JSON string of tags
-    IPV4AssignMode ipv4_assign_mode = 16; // IPv4 assignment mode
-    IPv6AssignMode ipv6_assign_mode = 17; // IPv6 assignment mode
-    optional DNS dns = 18; // DNS configuration
-    bool sso_enabled = 19; // Whether Single Sign-On is enabled
-    optional string sso_client_id = 20; // SSO client ID
-    optional string sso_authorization_endpoint = 21; // SSO authorization endpoint
-    optional string sso_issuer = 22; // SSO issuer
-    optional string sso_provider = 23; // SSO provider
-}
-
 message NetworkChange {
+    message NetworkChangeMetadata {
+        string trace_id = 1;
+        string controller_id = 2; 
+    }
+
+    message IPRange {
+        string start_ip = 1; // Start of the IP range
+        string end_ip = 2;   // End of the IP range
+    }
+
+    message Route {
+        string target = 1; // Target IP or network
+        optional string via = 2; // Optional next hop IP
+    }
+
+    message DNS {
+        string domain = 1; // Search domain
+        repeated string nameservers = 2; // List of nameservers
+    }
+
+    message IPV4AssignMode {
+        bool zt = 1; // Whether ZeroTier is used for IPv4 assignment
+    }
+
+    message IPv6AssignMode {
+        bool six_plane = 1; // Whether 6plane is used for IPv6 assignment
+        bool rfc4193 = 2; // Whether RFC 4193 is used for IPv6 assignment
+        bool zt = 3; // Whether ZeroTier is used for IPv6 assignment
+    }
+
+    message Network {
+        string network_id = 1;
+        string capabilities = 2; // JSON string of capabilities
+        uint64 creation_time = 3; // Unix timestamp in milliseconds
+        bool enable_broadcast = 4; // Whether broadcast is enabled
+        repeated IPRange assignment_pools = 5; // List of IP ranges for assignment
+        uint32 mtu = 6; // Maximum Transmission Unit
+        uint32 multicast_limit = 7; // Limit for multicast messages
+        optional string name = 8; // Name of the network
+        bool is_private = 9; // Whether the network is private
+        uint32 remote_trace_level = 10; // Remote trace level
+        optional string remote_trace_target = 11; // Remote trace target
+        uint64 revision = 12; // Revision number
+        repeated Route routes = 13; // List of routes
+        string rules = 14; // JSON string of rules
+        optional string tags = 15; // JSON string of tags
+        IPV4AssignMode ipv4_assign_mode = 16; // IPv4 assignment mode
+        IPv6AssignMode ipv6_assign_mode = 17; // IPv6 assignment mode
+        optional DNS dns = 18; // DNS configuration
+        bool sso_enabled = 19; // Whether Single Sign-On is enabled
+        optional string sso_client_id = 20; // SSO client ID
+        optional string sso_authorization_endpoint = 21; // SSO authorization endpoint
+        optional string sso_issuer = 22; // SSO issuer
+        optional string sso_provider = 23; // SSO provider
+    }
+
     optional Network old = 1;
     optional Network new = 2;
-    optional Metadata metadata = 3;
+    optional NetworkChangeMetadata metadata = 3;
 }

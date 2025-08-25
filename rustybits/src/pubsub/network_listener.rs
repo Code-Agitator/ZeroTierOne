@@ -88,7 +88,8 @@ impl NetworkListener {
 mod tests {
     use super::*;
     use crate::pubsub::change_listener::tests::setup_pubsub_emulator;
-    use crate::pubsub::protobuf::pbmessages::Network;
+    use crate::pubsub::protobuf::pbmessages::network_change::Network;
+    use crate::pubsub::protobuf::pbmessages::NetworkChange;
 
     use gcloud_googleapis::pubsub::v1::PubsubMessage;
     use gcloud_pubsub::client::{Client, ClientConfig};

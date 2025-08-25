@@ -2,10 +2,15 @@ syntax = "proto3";
 
 package pbmessages;
 
-import "metadata.proto";
+
 
 message MemberStatus {
-    Metadata metadata = 1;
+    message MemberStatusMetadata {
+        string trace_id = 1;
+        string controller_id = 2; 
+    }
+
+    MemberStatusMetadata metadata = 1;
     string network_id = 2;
     string member_id = 3;
     uint64 timestamp = 4; // Unix timestamp in milliseconds

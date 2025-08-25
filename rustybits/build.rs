@@ -12,7 +12,6 @@ fn main() {
             .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
             .compile_protos(
                 &[
-                    "src/pubsub/metadata.proto",
                     "src/pubsub/network.proto",
                     "src/pubsub/member.proto",
                     "src/pubsub/member_status.proto",

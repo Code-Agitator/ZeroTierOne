@@ -87,7 +87,8 @@ impl MemberListener {
 mod tests {
     use super::*;
     use crate::pubsub::change_listener::tests::setup_pubsub_emulator;
-    use crate::pubsub::protobuf::pbmessages::{Member, MemberChange};
+    use crate::pubsub::protobuf::pbmessages::member_change::Member;
+    use crate::pubsub::protobuf::pbmessages::MemberChange;
 
     use gcloud_googleapis::pubsub::v1::PubsubMessage;
     use gcloud_pubsub::client::{Client, ClientConfig};

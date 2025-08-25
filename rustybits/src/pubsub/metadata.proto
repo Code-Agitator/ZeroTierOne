@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-package pbmessages;
-
-message Metadata {
-    string trace_id = 1;
-    string controller_id = 2;    
-}
