@@ -146,6 +146,7 @@ SharedPtr<Peer> Topology::getUpstreamPeer(const uint64_t nwid)
 	unsigned int bestq = ~((unsigned int)0);
 	const SharedPtr<Peer>* best = (const SharedPtr<Peer>*)0;
 
+	/*
 	// If this is related to a network, check for a network specific relay.
 	if (nwid) {
 		SharedPtr<Network> network = RR->node->network(nwid);
@@ -153,6 +154,7 @@ SharedPtr<Peer> Topology::getUpstreamPeer(const uint64_t nwid)
 			//
 		}
 	}
+	*/
 
 	// If this is unrelated to a network OR there is no network-specific relay, send via a root.
 	{

@@ -801,7 +801,6 @@ bool Network::filterOutgoingPacket(
 							macSource.appendTo(outp);
 							outp.append((uint16_t)etherType);
 							outp.append(frameData, ccLength2);
-							outp.compress();
 							RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 						}
 
@@ -839,7 +838,6 @@ bool Network::filterOutgoingPacket(
 			macSource.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(frameData, ccLength);
-			outp.compress();
 			RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 		}
 
@@ -851,7 +849,6 @@ bool Network::filterOutgoingPacket(
 			macSource.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(frameData, frameLen);
-			outp.compress();
 			RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 
 			if (_config.remoteTraceTarget) {
@@ -978,7 +975,6 @@ int Network::filterIncomingPacket(
 						macSource.appendTo(outp);
 						outp.append((uint16_t)etherType);
 						outp.append(frameData, ccLength2);
-						outp.compress();
 						RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 					}
 					break;
@@ -1011,7 +1007,6 @@ int Network::filterIncomingPacket(
 			macSource.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(frameData, ccLength);
-			outp.compress();
 			RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 		}
 
@@ -1023,7 +1018,6 @@ int Network::filterIncomingPacket(
 			macSource.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(frameData, frameLen);
-			outp.compress();
 			RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 
 			if (_config.remoteTraceTarget) {
@@ -1752,19 +1746,17 @@ void Network::_sendUpdatesToMembers(void* tPtr, const MulticastGroup* const newM
 		std::sort(alwaysAnnounceTo.begin(), alwaysAnnounceTo.end());
 
 		for (std::vector<Address>::const_iterator a(alwaysAnnounceTo.begin()); a != alwaysAnnounceTo.end(); ++a) {
-			/*
 			// push COM to non-members so they can do multicast request auth
-			if ( (_config.com) && (!_memberships.contains(*a)) && (*a != RR->identity.address()) ) {
-				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+			if ((_config.com) && (! _memberships.contains(*a)) && (*a != RR->identity.address())) {
+				Packet outp(*a, RR->identity.address(), Packet::VERB_NETWORK_CREDENTIALS);
 				_config.com.serialize(outp);
 				outp.append((uint8_t)0x00);
-				outp.append((uint16_t)0); // no capabilities
-				outp.append((uint16_t)0); // no tags
-				outp.append((uint16_t)0); // no revocations
-				outp.append((uint16_t)0); // no certificates of ownership
-				RR->sw->send(tPtr,outp,true);
+				outp.append((uint16_t)0);	// no capabilities
+				outp.append((uint16_t)0);	// no tags
+				outp.append((uint16_t)0);	// no revocations
+				outp.append((uint16_t)0);	// no certificates of ownership
+				RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 			}
-			*/
 			_announceMulticastGroupsTo(tPtr, *a, groups);
 		}
 	}
