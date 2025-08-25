@@ -79,12 +79,9 @@ void Switch::onRemotePacket(void* tPtr, const int64_t localSocket, const InetAdd
 
 				if (destination != RR->identity.address()) {
 					// RELAY: fragment is for a different node, so maybe send it there if we should relay.
-
-					/*
 					if ((! RR->topology->amUpstream()) && (! path->trustEstablished(now))) {
 						return;
 					}
-					*/
 
 					if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 						fragment.incrementHops();
@@ -166,7 +163,7 @@ void Switch::onRemotePacket(void* tPtr, const int64_t localSocket, const InetAdd
 				if (destination != RR->identity.address()) {
 					// RELAY: packet head is for a different node, so maybe send it there if we should relay.
 
-					if (/* (! RR->topology->amUpstream()) && (! path->trustEstablished(now)) && */ (source != RR->identity.address())) {
+					if ((! RR->topology->amUpstream()) && (! path->trustEstablished(now)) && (source != RR->identity.address())) {
 						return;
 					}
 
