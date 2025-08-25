@@ -240,6 +240,15 @@ class NetworkConfig {
   public:
 	NetworkConfig();
 
+	inline bool operator==(const NetworkConfig& nc) const
+	{
+		return (memcmp(this, &nc, sizeof(NetworkConfig)) == 0);
+	}
+	inline bool operator!=(const NetworkConfig& nc) const
+	{
+		return (! (*this == nc));
+	}
+
 	/**
 	 * Write this network config to a dictionary for transport
 	 *
