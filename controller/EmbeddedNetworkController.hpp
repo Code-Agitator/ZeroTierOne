@@ -26,7 +26,11 @@
 #include "DBMirrorSet.hpp"
 
 #include <atomic>
+#ifdef CMAKE_BUILD
+#include <httplib.h>
+#else
 #include <cpp-httplib/httplib.h>
+#endif
 #include <list>
 #include <map>
 #include <nlohmann/json.hpp>

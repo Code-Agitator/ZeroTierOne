@@ -13,7 +13,11 @@
 
 #include "LFDB.hpp"
 
+#ifdef CMAKE_BUILD
+#include "httplib.h"
+#else
 #include "../ext/cpp-httplib/httplib.h"
+#endif
 #include "../osdep/OSUtils.hpp"
 
 #include <chrono>

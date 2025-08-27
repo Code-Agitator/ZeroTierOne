@@ -13,7 +13,7 @@
 
 #include <memory>
 #include <pqxx/pqxx>
-#include <redis++/redis++.h>
+#include <sw/redis++/redis++.h>
 
 namespace rustybits {
 struct SmeeClient;

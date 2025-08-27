@@ -8,8 +8,8 @@
 #include "Redis.hpp"
 
 #include <memory>
-#include <redis++/redis++.h>
 #include <string>
+#include <sw/redis++/redis++.h>
 #include <thread>
 
 namespace ZeroTier {

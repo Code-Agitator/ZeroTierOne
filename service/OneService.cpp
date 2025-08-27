@@ -57,7 +57,11 @@
 #include "OneService.hpp"
 #include "SoftwareUpdater.hpp"
 
+#ifdef CMAKE_BUILD
+#include <httplib.h>
+#else
 #include <cpp-httplib/httplib.h>
+#endif
 
 #ifdef ZT_OPENTELEMETRY_ENABLED
 #include "opentelemetry/exporters/memory/in_memory_data.h"
@@ -139,8 +143,10 @@ extern "C" {
 using json = nlohmann::json;
 
 #include "../controller/EmbeddedNetworkController.hpp"
+#ifdef ZT_CONTROLLER_USE_LIBPQ
 #include "../controller/PostgreSQL.hpp"
 #include "../controller/Redis.hpp"
+#endif
 #include "../osdep/EthernetTap.hpp"
 #ifdef __WINDOWS__
 #include "../osdep/WindowsEthernetTap.hpp"
@@ -2851,13 +2857,14 @@ class OneServiceImpl : public OneService {
 				std::string linkSelectMethodStr;
 				if (customPolicy.contains("linkSelectMethod")) {
 					linkSelectMethodStr = OSUtils::jsonString(customPolicy["linkSelectMethod"], "always");
-				} else {
+				}
+				else {
 					linkSelectMethodStr = OSUtils::jsonString(customPolicy["activeReselect"], "always");
 					if (customPolicy.contains("activeReselect")) {
 						fprintf(stderr, "warning: 'activeReselect' is deprecated, please use 'linkSelectMethod' instead in policy '%s'\n", customPolicyStr.c_str());
 					}
 				}
-				
+
 				if (linkSelectMethodStr == "always") {
 					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_ALWAYS);
 				}
