@@ -81,6 +81,7 @@ set_property(TARGET rustybits PROPERTY IMPORTED_LOCATION ${RUSTYBITS_LIB})
 add_dependencies(rustybits rustybits_build)
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -z noexecstack")
+
 # Get & build dependencies not in conda
 include (cmake/cpp-httplib.cmake)
 include (cmake/redis-plus-plus.cmake)
