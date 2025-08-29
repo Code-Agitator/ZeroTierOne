@@ -49,18 +49,30 @@ if (ZT1_CENTRAL_CONTROLLER)
         PubSubListener.hpp
         Redis.hpp
         RedisListener.cpp
-        RedisListener.hpp)
+        RedisListener.hpp
+        StatusWriter.cpp
+        StatusWriter.hpp
+        BigTableStatusWriter.cpp
+        BigTableStatusWriter.hpp
+        PostgresStatusWriter.cpp
+        PostgresStatusWriter.hpp
+        RedisStatusWriter.cpp
+        RedisStatusWriter.hpp
+    )
 
     list(APPEND INCLUDE_DIRS
         ${PostgreSQL_INCLUDE_DIRS}
         "${redis++_BUILD_DIR}/src"
         ${pqxx_INCLUDE_DIRS}
+
     )
 
     list(APPEND LINK_LIBS
         redis++::redis++_static
         pqxx
         ${PostgreSQL_LIBRARIES}
+        google-cloud-cpp::bigtable
+        google-cloud-cpp::pubsub
     )
 endif()
 
