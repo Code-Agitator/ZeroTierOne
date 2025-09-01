@@ -44,7 +44,6 @@ class PubSubListener : public NotificationListener {
 	google::cloud::pubsub_admin::SubscriptionAdminClient _adminClient;
 	google::cloud::pubsub::Subscription _subscription;
 	std::shared_ptr<google::cloud::pubsub::Subscriber> _subscriber;
-	google::cloud::future<google::cloud::Status> _session;
 	std::thread _subscriberThread;
 };
 
