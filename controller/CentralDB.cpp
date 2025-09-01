@@ -1498,6 +1498,8 @@ void CentralDB::onlineNotificationThread()
 		catch (std::exception& e) {
 			fprintf(stderr, "%s: error in onlinenotification thread: %s\n", _myAddressStr.c_str(), e.what());
 		}
+
+		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
 }
 
