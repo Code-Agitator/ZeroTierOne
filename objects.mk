@@ -34,21 +34,7 @@ CORE_OBJS=\
 	osdep/OSUtils.o
 
 ONE_OBJS=\
-	controller/EmbeddedNetworkController.o \
-	controller/DBMirrorSet.o \
-	controller/DB.o \
-	controller/FileDB.o \
-	controller/LFDB.o \
-	controller/CtlUtil.o \
-	controller/CV1.o \
-	controller/CV2.o \
-	controller/CentralDB.o \
-	controller/PubSubListener.o \
-	controller/RedisListener.o \
-	controller/PostgreSQL.o \
 	osdep/EthernetTap.o \
 	osdep/ManagedRoute.o \
 	osdep/Http.o \
-	service/SoftwareUpdater.o \
 	service/OneService.o
-

@@ -1,15 +1,10 @@
-/*
- * Copyright (c)2019 ZeroTier, Inc.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
  */
-/****/
 
 /**
  * @file
@@ -29,20 +24,20 @@
 #include <string.h>
 
 #define ZT_MSG_INFO true
-#define ZT_COLOR    true
+#define ZT_COLOR	true
 
 // Debug output colors
 #if defined(__APPLE__)
 #include "TargetConditionals.h"
 #endif
 #if defined(ZT_COLOR) && ! defined(_WIN32) && ! defined(__ANDROID__) && ! defined(TARGET_OS_IPHONE) && ! defined(TARGET_IPHONE_SIMULATOR) && ! defined(__APP_FRAMEWORK__)
-#define ZT_RED   "\x1B[31m"
-#define ZT_GRN   "\x1B[32m"
-#define ZT_YEL   "\x1B[33m"
-#define ZT_BLU   "\x1B[34m"
-#define ZT_MAG   "\x1B[35m"
-#define ZT_CYN   "\x1B[36m"
-#define ZT_WHT   "\x1B[37m"
+#define ZT_RED	 "\x1B[31m"
+#define ZT_GRN	 "\x1B[32m"
+#define ZT_YEL	 "\x1B[33m"
+#define ZT_BLU	 "\x1B[34m"
+#define ZT_MAG	 "\x1B[35m"
+#define ZT_CYN	 "\x1B[36m"
+#define ZT_WHT	 "\x1B[37m"
 #define ZT_RESET "\x1B[0m"
 #else
 #define ZT_RED
@@ -90,7 +85,7 @@
 #else
 #define DEBUG_INFO(fmt, args...)
 #endif
-#else   // blank
+#else	// blank
 #if defined(_WIN32)
 #define DEBUG_INFO(...)
 #else
@@ -98,4 +93,4 @@
 #endif
 #endif
 
-#endif   // _H
+#endif	 // _H

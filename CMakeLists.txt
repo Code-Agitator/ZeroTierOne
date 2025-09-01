@@ -91,7 +91,7 @@ add_subdirectory(ext)
 add_subdirectory(node)
 add_subdirectory(osdep)
 add_subdirectory(service)
-add_subdirectory(controller)
+add_subdirectory(nonfree)
 
 set(LINKED_LIBRARIES
     prometheus-cpp-lite

@@ -1,15 +1,10 @@
-/*
- * Copyright (c)2019 ZeroTier, Inc.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
  */
-/****/
 
 #include "Network.hpp"
 
@@ -31,7 +26,6 @@
 #include "Trace.hpp"
 
 #include <math.h>
-#include <set>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -807,8 +801,7 @@ bool Network::filterOutgoingPacket(
 							macSource.appendTo(outp);
 							outp.append((uint16_t)etherType);
 							outp.append(frameData, ccLength2);
-							outp.compress();
-							RR->sw->send(tPtr, outp, true);
+							RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 						}
 
 						break;
@@ -845,8 +838,7 @@ bool Network::filterOutgoingPacket(
 			macSource.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(frameData, ccLength);
-			outp.compress();
-			RR->sw->send(tPtr, outp, true);
+			RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 		}
 
 		if ((ztDest != ztFinalDest) && (ztFinalDest)) {
@@ -857,8 +849,7 @@ bool Network::filterOutgoingPacket(
 			macSource.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(frameData, frameLen);
-			outp.compress();
-			RR->sw->send(tPtr, outp, true);
+			RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 
 			if (_config.remoteTraceTarget) {
 				RR->t->networkFilter(
@@ -984,8 +975,7 @@ int Network::filterIncomingPacket(
 						macSource.appendTo(outp);
 						outp.append((uint16_t)etherType);
 						outp.append(frameData, ccLength2);
-						outp.compress();
-						RR->sw->send(tPtr, outp, true);
+						RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 					}
 					break;
 				}
@@ -1017,8 +1007,7 @@ int Network::filterIncomingPacket(
 			macSource.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(frameData, ccLength);
-			outp.compress();
-			RR->sw->send(tPtr, outp, true);
+			RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 		}
 
 		if ((ztDest != ztFinalDest) && (ztFinalDest)) {
@@ -1029,8 +1018,7 @@ int Network::filterIncomingPacket(
 			macSource.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(frameData, frameLen);
-			outp.compress();
-			RR->sw->send(tPtr, outp, true);
+			RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 
 			if (_config.remoteTraceTarget) {
 				RR->t->networkFilter(tPtr, *this, rrl, (c) ? &crrl : (Trace::RuleResultLog*)0, c, sourcePeer->address(), ztDest, macSource, macDest, frameData, frameLen, etherType, vlanId, false, true, 0);
@@ -1160,7 +1148,7 @@ uint64_t Network::handleConfigChunk(void* tPtr, const uint64_t packetId, const A
 					if ((*a != source) && (*a != controller())) {
 						Packet outp(*a, RR->identity.address(), Packet::VERB_NETWORK_CONFIG);
 						outp.append(reinterpret_cast<const uint8_t*>(chunk.data()) + start, chunk.size() - start);
-						RR->sw->send(tPtr, outp, true);
+						RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 					}
 				}
 			}
@@ -1471,7 +1459,7 @@ void Network::requestConfiguration(void* tPtr)
 	}
 	outp.compress();
 	RR->node->expectReplyTo(outp.packetId());
-	RR->sw->send(tPtr, outp, true);
+	RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 }
 
 bool Network::gate(void* tPtr, const SharedPtr<Peer>& peer)
@@ -1628,7 +1616,7 @@ Membership::AddCredentialResult Network::addCredential(void* tPtr, const Address
 				outp.append((uint16_t)1);	  // one revocation!
 				rev.serialize(outp);
 				outp.append((uint16_t)0);	// no certificates of ownership
-				RR->sw->send(tPtr, outp, true);
+				RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 			}
 		}
 	}
@@ -1758,19 +1746,17 @@ void Network::_sendUpdatesToMembers(void* tPtr, const MulticastGroup* const newM
 		std::sort(alwaysAnnounceTo.begin(), alwaysAnnounceTo.end());
 
 		for (std::vector<Address>::const_iterator a(alwaysAnnounceTo.begin()); a != alwaysAnnounceTo.end(); ++a) {
-			/*
 			// push COM to non-members so they can do multicast request auth
-			if ( (_config.com) && (!_memberships.contains(*a)) && (*a != RR->identity.address()) ) {
-				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+			if ((_config.com) && (! _memberships.contains(*a)) && (*a != RR->identity.address())) {
+				Packet outp(*a, RR->identity.address(), Packet::VERB_NETWORK_CREDENTIALS);
 				_config.com.serialize(outp);
 				outp.append((uint8_t)0x00);
-				outp.append((uint16_t)0); // no capabilities
-				outp.append((uint16_t)0); // no tags
-				outp.append((uint16_t)0); // no revocations
-				outp.append((uint16_t)0); // no certificates of ownership
-				RR->sw->send(tPtr,outp,true);
+				outp.append((uint16_t)0);	// no capabilities
+				outp.append((uint16_t)0);	// no tags
+				outp.append((uint16_t)0);	// no revocations
+				outp.append((uint16_t)0);	// no certificates of ownership
+				RR->sw->send(tPtr, outp, true, _id, ZT_QOS_NO_FLOW);
 			}
-			*/
 			_announceMulticastGroupsTo(tPtr, *a, groups);
 		}
 	}
@@ -1798,7 +1784,7 @@ void Network::_announceMulticastGroupsTo(void* tPtr, const Address& peer, const 
 	for (std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin()); mg != allMulticastGroups.end(); ++mg) {
 		if ((outp->size() + 24) >= ZT_PROTO_MAX_PACKET_LENGTH) {
 			outp->compress();
-			RR->sw->send(tPtr, *outp, true);
+			RR->sw->send(tPtr, *outp, true, _id, ZT_QOS_NO_FLOW);
 			outp->reset(peer, RR->identity.address(), Packet::VERB_MULTICAST_LIKE);
 		}
 
@@ -1810,7 +1796,7 @@ void Network::_announceMulticastGroupsTo(void* tPtr, const Address& peer, const 
 
 	if (outp->size() > ZT_PROTO_MIN_PACKET_LENGTH) {
 		outp->compress();
-		RR->sw->send(tPtr, *outp, true);
+		RR->sw->send(tPtr, *outp, true, _id, ZT_QOS_NO_FLOW);
 	}
 
 	delete outp;

@@ -1,15 +1,10 @@
-/*
- * Copyright (c)2019 ZeroTier, Inc.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
  */
-/****/
 
 // #define ZT_TRACE
 
@@ -19,13 +14,13 @@
 #include "Capability.hpp"
 #include "CertificateOfMembership.hpp"
 #include "CertificateOfOwnership.hpp"
+#include "Constants.hpp"
 #include "Dictionary.hpp"
 #include "Node.hpp"
 #include "Revocation.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Switch.hpp"
 #include "Tag.hpp"
-#include "Utils.hpp"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -632,7 +627,7 @@ void Trace::_send(void* const tPtr, const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE>& 
 	Packet outp(dest, RR->identity.address(), Packet::VERB_REMOTE_TRACE);
 	outp.appendCString(d.data());
 	outp.compress();
-	RR->sw->send(tPtr, outp, true);
+	RR->sw->send(tPtr, outp, true, 0, ZT_QOS_NO_FLOW);
 }
 
 void Trace::_spamToAllNetworks(void* const tPtr, const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE>& d, const Level level)

@@ -1,15 +1,10 @@
-/*
- * Copyright (c)2013-2020 ZeroTier, Inc.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
  */
-/****/
 
 #include "Peer.hpp"
 
@@ -19,8 +14,8 @@
 #include "InetAddress.hpp"
 #include "Metrics.hpp"
 #include "Network.hpp"
+#include "Node.hpp"
 #include "Packet.hpp"
-#include "RingBuffer.hpp"
 #include "SelfAwareness.hpp"
 #include "Switch.hpp"
 #include "Trace.hpp"
@@ -464,13 +459,13 @@ void Peer::sendHELLO(void* tPtr, const int64_t localSocket, const InetAddress& a
 	Metrics::pkt_hello_out++;
 
 	if (atAddress) {
-		outp.armor(_key, false, true, nullptr, _id);
+		outp.armor(_key, false, RR->node->encryptedHelloEnabled(), nullptr, _id);
 		RR->node->expectReplyTo(outp.packetId());
 		RR->node->putPacket(tPtr, RR->node->lowBandwidthModeEnabled() ? localSocket : -1, atAddress, outp.data(), outp.size());
 	}
 	else {
 		RR->node->expectReplyTo(outp.packetId());
-		RR->sw->send(tPtr, outp, true);
+		RR->sw->send(tPtr, outp, true, 0, ZT_QOS_NO_FLOW);
 	}
 }
 
