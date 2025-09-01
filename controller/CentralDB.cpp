@@ -184,9 +184,9 @@ CentralDB::CentralDB(
 		case LISTENER_MODE_PUBSUB:
 			if (cc->pubSubConfig != NULL) {
 				_membersDbWatcher =
-					std::make_shared<PubSubMemberListener>(_myAddressStr, cc->pubSubConfig->listen_timeout, this);
+					std::make_shared<PubSubMemberListener>(_myAddressStr, cc->pubSubConfig->project, this);
 				_networksDbWatcher =
-					std::make_shared<PubSubNetworkListener>(_myAddressStr, cc->pubSubConfig->listen_timeout, this);
+					std::make_shared<PubSubNetworkListener>(_myAddressStr, cc->pubSubConfig->project, this);
 			}
 			else {
 				throw std::runtime_error(
@@ -1250,7 +1250,6 @@ void CentralDB::commitThread()
 
 					std::string id = config["id"];
 
-					// network must already exist
 					pqxx::result res = w.exec_params0(
 						"INSERT INTO networks_ctl (id, name, configuration, controller_id, revision) "
 						"VALUES ($1, $2, $3, $4, $5) "
@@ -1261,19 +1260,19 @@ void CentralDB::commitThread()
 
 					w.commit();
 
-					res = w.exec_params0("DELETE FROM ztc_network_assignment_pool WHERE network_id = $1", 0);
+					// res = w.exec_params0("DELETE FROM ztc_network_assignment_pool WHERE network_id = $1", 0);
 
-					auto pool = config["ipAssignmentPools"];
-					bool err = false;
-					for (auto i = pool.begin(); i != pool.end(); ++i) {
-						std::string start = (*i)["ipRangeStart"];
-						std::string end = (*i)["ipRangeEnd"];
+					// auto pool = config["ipAssignmentPools"];
+					// bool err = false;
+					// for (auto i = pool.begin(); i != pool.end(); ++i) {
+					// 	std::string start = (*i)["ipRangeStart"];
+					// 	std::string end = (*i)["ipRangeEnd"];
 
-						res = w.exec_params0(
-							"INSERT INTO ztc_network_assignment_pool (network_id, ip_range_start, ip_range_end) "
-							"VALUES ($1, $2, $3)",
-							id, start, end);
-					}
+					// 	res = w.exec_params0(
+					// 		"INSERT INTO ztc_network_assignment_pool (network_id, ip_range_start, ip_range_end) "
+					// 		"VALUES ($1, $2, $3)",
+					// 		id, start, end);
+					// }
 
 					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
 					if (nwidInt) {

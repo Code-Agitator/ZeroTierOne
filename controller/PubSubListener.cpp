@@ -2,43 +2,101 @@
 #include "PubSubListener.hpp"
 
 #include "DB.hpp"
+#include "member.pb.h"
+#include "network.pb.h"
 #include "opentelemetry/trace/provider.h"
 #include "rustybits.h"
 
+#include <google/cloud/pubsub/admin/subscription_admin_client.h>
+#include <google/cloud/pubsub/admin/subscription_admin_connection.h>
+#include <google/cloud/pubsub/message.h>
+#include <google/cloud/pubsub/subscriber.h>
+#include <google/cloud/pubsub/subscription.h>
+#include <google/cloud/pubsub/topic.h>
 #include <nlohmann/json.hpp>
+
+namespace pubsub = ::google::cloud::pubsub;
+namespace pubsub_admin = ::google::cloud::pubsub_admin;
 
 namespace ZeroTier {
 
-void listener_callback(void* user_ptr, const uint8_t* payload, uintptr_t length)
+nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc);
+nlohmann::json toJson(const pbmessages::MemberChange_Member& mc);
+
+PubSubListener::PubSubListener(std::string controller_id, std::string project, std::string topic)
+	: _controller_id(controller_id)
+	, _project(project)
+	, _topic(topic)
+	, _subscription_id("sub-" + controller_id + "-network-changes")
+	, _run(false)
+	, _adminClient(pubsub_admin::MakeSubscriptionAdminConnection())
+	, _subscription(pubsub::Subscription(_project, _subscription_id))
 {
-	if (! user_ptr || ! payload || length == 0) {
-		fprintf(stderr, "Invalid parameters in listener_callback\n");
-		return;
+	GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+	google::pubsub::v1::Subscription request;
+	request.set_name(_subscription.FullName());
+	request.set_topic(pubsub::Topic(project, topic).FullName());
+	request.set_filter("(attributes.controller_id=\"" + _controller_id + "\")");
+	auto sub = _adminClient.CreateSubscription(request);
+	if (! sub.ok()) {
+		fprintf(stderr, "Failed to create subscription: %s\n", sub.status().message().c_str());
+		throw std::runtime_error("Failed to create subscription");
 	}
 
-	auto* listener = static_cast<PubSubListener*>(user_ptr);
-	std::string payload_str(reinterpret_cast<const char*>(payload), length);
-	listener->onNotification(payload_str);
+	if (sub.status().code() == google::cloud::StatusCode::kAlreadyExists) {
+		fprintf(stderr, "Subscription already exists\n");
+		throw std::runtime_error("Subscription already exists");
+	}
+
+	_subscriber = std::make_shared<pubsub::Subscriber>(pubsub::MakeSubscriberConnection(_subscription));
+
+	_run = true;
+	_subscriberThread = std::thread(&PubSubListener::subscribe, this);
 }
 
-PubSubNetworkListener::PubSubNetworkListener(std::string controller_id, uint64_t listen_timeout, DB* db) : _run(true), _controller_id(controller_id), _db(db), _listener(nullptr)
+PubSubListener::~PubSubListener()
 {
-	_listener = rustybits::network_listener_new(_controller_id.c_str(), listen_timeout, listener_callback, this);
-	_listenThread = std::thread(&PubSubNetworkListener::listenThread, this);
-	_changeHandlerThread = std::thread(&PubSubNetworkListener::changeHandlerThread, this);
+	_run = false;
+	_session.cancel();
+	if (_subscriberThread.joinable()) {
+		_subscriberThread.join();
+	}
+}
+
+void PubSubListener::subscribe()
+{
+	while (_run) {
+		_session = _subscriber->Subscribe([this](pubsub::Message const& m, pubsub::AckHandler h) {
+			auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+			auto tracer = provider->GetTracer("PubSubListener");
+			auto span = tracer->StartSpan("PubSubListener::onMessage");
+			auto scope = tracer->WithActiveSpan(span);
+			span->SetAttribute("message_id", m.message_id());
+			span->SetAttribute("ordering_key", m.ordering_key());
+			span->SetAttribute("attributes", m.attributes().size());
+
+			fprintf(stderr, "Received message %s\n", m.message_id().c_str());
+			onNotification(m.data());
+			std::move(h).ack();
+			span->SetStatus(opentelemetry::trace::StatusCode::kOk);
+			return true;
+		});
+		auto status = _session.get();
+		if (! status.ok() && _run) {
+			fprintf(stderr, "Error during Subscribe: %s\n", status.message().c_str());
+		}
+	}
+}
+
+PubSubNetworkListener::PubSubNetworkListener(std::string controller_id, std::string project, DB* db)
+	: PubSubListener(controller_id, project, "controller-network-change-stream")
+	, _db(db)
+{
 }
 
 PubSubNetworkListener::~PubSubNetworkListener()
 {
-	_run = false;
-	if (_listenThread.joinable()) {
-		_listenThread.join();
-	}
-
-	if (_listener) {
-		rustybits::network_listener_delete(_listener);
-		_listener = nullptr;
-	}
 }
 
 void PubSubNetworkListener::onNotification(const std::string& payload)
@@ -47,23 +105,26 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 	auto tracer = provider->GetTracer("PubSubNetworkListener");
 	auto span = tracer->StartSpan("PubSubNetworkListener::onNotification");
 	auto scope = tracer->WithActiveSpan(span);
-	span->SetAttribute("payload", payload);
 
-	fprintf(stderr, "Network notification received: %s\n", payload.c_str());
+	pbmessages::NetworkChange nc;
+	if (! nc.ParseFromString(payload)) {
+		fprintf(stderr, "Failed to parse NetworkChange protobuf message\n");
+		span->SetAttribute("error", "Failed to parse NetworkChange protobuf message");
+		span->SetStatus(opentelemetry::trace::StatusCode::kError, "Failed to parse protobuf");
+		return;
+	}
+
+	fprintf(stderr, "Network notification received");
 
 	try {
-		nlohmann::json j = nlohmann::json::parse(payload);
-		nlohmann::json& ov_tmp = j["old"];
-		nlohmann::json& nv_tmp = j["new"];
 		nlohmann::json oldConfig, newConfig;
 
-		if (ov_tmp.is_object()) {
-			// TODO:  copy old configuration to oldConfig
-			// changing key names along the way
+		if (nc.has_old()) {
+			oldConfig = toJson(nc.old());
 		}
-		if (nv_tmp.is_object()) {
-			// TODO:  copy new configuration to newConfig
-			// changing key names along the way
+
+		if (nc.has_new_()) {
+			newConfig = toJson(nc.new_());
 		}
 
 		if (oldConfig.is_object() && newConfig.is_object()) {
@@ -106,41 +167,14 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 	}
 }
 
-void PubSubNetworkListener::listenThread()
+PubSubMemberListener::PubSubMemberListener(std::string controller_id, std::string project, DB* db)
+	: PubSubListener(controller_id, project, "controller-member-change-stream")
+	, _db(db)
 {
-	if (_listener) {
-		while (_run) {
-			rustybits::network_listener_listen(_listener);
-		}
-	}
-}
-
-void PubSubNetworkListener::changeHandlerThread()
-{
-	if (_listener) {
-		rustybits::network_listener_change_handler(_listener);
-	}
-}
-
-PubSubMemberListener::PubSubMemberListener(std::string controller_id, uint64_t listen_timeout, DB* db) : _run(true), _controller_id(controller_id), _db(db), _listener(nullptr)
-{
-	_run = true;
-	_listener = rustybits::member_listener_new(_controller_id.c_str(), listen_timeout, listener_callback, this);
-	_listenThread = std::thread(&PubSubMemberListener::listenThread, this);
-	_changeHandlerThread = std::thread(&PubSubMemberListener::changeHandlerThread, this);
 }
 
 PubSubMemberListener::~PubSubMemberListener()
 {
-	_run = false;
-	if (_listenThread.joinable()) {
-		_listenThread.join();
-	}
-
-	if (_listener) {
-		rustybits::member_listener_delete(_listener);
-		_listener = nullptr;
-	}
 }
 
 void PubSubMemberListener::onNotification(const std::string& payload)
@@ -149,22 +183,27 @@ void PubSubMemberListener::onNotification(const std::string& payload)
 	auto tracer = provider->GetTracer("PubSubMemberListener");
 	auto span = tracer->StartSpan("PubSubMemberListener::onNotification");
 	auto scope = tracer->WithActiveSpan(span);
-	span->SetAttribute("payload", payload);
 
-	fprintf(stderr, "Member notification received: %s\n", payload.c_str());
+	pbmessages::MemberChange mc;
+	if (! mc.ParseFromString(payload)) {
+		fprintf(stderr, "Failed to parse MemberChange protobuf message\n");
+		span->SetAttribute("error", "Failed to parse MemberChange protobuf message");
+		span->SetStatus(opentelemetry::trace::StatusCode::kError, "Failed to parse protobuf");
+		return;
+	}
+
+	fprintf(stderr, "Member notification received");
 
 	try {
 		nlohmann::json tmp;
-		nlohmann::json old_tmp = tmp["old"];
-		nlohmann::json new_tmp = tmp["new"];
 		nlohmann::json oldConfig, newConfig;
 
-		if (old_tmp.is_object()) {
-			// TODO: copy old configuration to oldConfig
+		if (mc.has_old()) {
+			oldConfig = toJson(mc.old());
 		}
 
-		if (new_tmp.is_object()) {
-			// TODO: copy new configuration to newConfig
+		if (mc.has_new_()) {
+			newConfig = toJson(mc.new_());
 		}
 
 		if (oldConfig.is_object() && newConfig.is_object()) {
@@ -214,20 +253,143 @@ void PubSubMemberListener::onNotification(const std::string& payload)
 	}
 }
 
-void PubSubMemberListener::listenThread()
+nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc)
 {
-	if (_listener) {
-		while (_run) {
-			rustybits::member_listener_listen(_listener);
+	nlohmann::json out;
+
+	out["id"] = nc.network_id();
+	out["name"] = nc.name();
+	out["capabilities"] = OSUtils::jsonParse(nc.capabilities());
+	out["mtu"] = nc.mtu();
+	out["multicastLimit"] = nc.multicast_limit();
+	out["private"] = nc.is_private();
+	out["remoteTraceLevel"] = nc.remote_trace_level();
+	if (nc.has_remote_trace_target()) {
+		out["remoteTraceTarget"] = nc.remote_trace_target();
+	}
+	else {
+		out["remoteTraceTarget"] = "";
+	}
+	out["rules"] = OSUtils::jsonParse(nc.rules());
+	out["rulesSource"] = nc.rules_source();
+	out["tags"] = OSUtils::jsonParse(nc.tags());
+
+	if (nc.has_ipv4_assign_mode()) {
+		nlohmann::json ipv4mode;
+		ipv4mode["zt"] = nc.ipv4_assign_mode().zt();
+		out["ipv4AssignMode"] = ipv4mode;
+	}
+	if (nc.has_ipv6_assign_mode()) {
+		nlohmann::json ipv6mode;
+		ipv6mode["6plane"] = nc.ipv6_assign_mode().six_plane();
+		ipv6mode["rfc4193"] = nc.ipv6_assign_mode().rfc4193();
+		ipv6mode["zt"] = nc.ipv6_assign_mode().zt();
+		out["ipv6AssignMode"] = ipv6mode;
+	}
+
+	if (nc.assignment_pools_size() > 0) {
+		nlohmann::json pools = nlohmann::json::array();
+		for (const auto& p : nc.assignment_pools()) {
+			nlohmann::json pool;
+			pool["ipRangeStart"] = p.start_ip();
+			pool["ipRangeEnd"] = p.end_ip();
+			pools.push_back(pool);
+		}
+		out["assignmentPools"] = pools;
+	}
+
+	if (nc.routes_size() > 0) {
+		nlohmann::json routes = nlohmann::json::array();
+		for (const auto& r : nc.routes()) {
+			nlohmann::json route;
+			route["target"] = r.target();
+			if (r.has_via()) {
+				route["via"] = r.via();
+			}
+			routes.push_back(route);
+		}
+		out["routes"] = routes;
+	}
+
+	if (nc.has_dns()) {
+		nlohmann::json dns;
+		if (nc.dns().nameservers_size() > 0) {
+			nlohmann::json servers = nlohmann::json::array();
+			for (const auto& s : nc.dns().nameservers()) {
+				servers.push_back(s);
+			}
+			dns["servers"] = servers;
+		}
+		dns["domain"] = nc.dns().domain();
+
+		out["dns"] = dns;
+	}
+
+	out["ssoEnabled"] = nc.sso_enabled();
+	nlohmann::json sso;
+	if (nc.sso_enabled()) {
+		sso = nlohmann::json::object();
+		if (nc.has_sso_client_id()) {
+			sso["ssoClientId"] = nc.sso_client_id();
+		}
+
+		if (nc.has_sso_authorization_endpoint()) {
+			sso["ssoAuthorizationEndpoint"] = nc.sso_authorization_endpoint();
+		}
+
+		if (nc.has_sso_issuer()) {
+			sso["ssoIssuer"] = nc.sso_issuer();
+		}
+
+		if (nc.has_sso_provider()) {
+			sso["ssoProvider"] = nc.sso_provider();
 		}
 	}
+	out["ssoConfig"] = sso;
+
+	return out;
 }
 
-void PubSubMemberListener::changeHandlerThread()
+nlohmann::json toJson(const pbmessages::MemberChange_Member& mc)
 {
-	if (_listener) {
-		rustybits::member_listener_change_handler(_listener);
+	nlohmann::json out;
+	out["id"] = mc.device_id();
+	out["nwid"] = mc.network_id();
+	if (mc.has_remote_trace_target()) {
+		out["remoteTraceTarget"] = mc.remote_trace_target();
 	}
+	else {
+		out["remoteTraceTarget"] = "";
+	}
+	out["authorized"] = mc.authorized();
+	out["activeBridge"] = mc.active_bridge();
+
+	auto ipAssignments = mc.ip_assignments();
+	if (ipAssignments.size() > 0) {
+		nlohmann::json assignments = nlohmann::json::array();
+		for (const auto& ip : ipAssignments) {
+			assignments.push_back(ip);
+		}
+		out["ipAssignments"] = assignments;
+	}
+
+	out["noAutoAssignIps"] = mc.no_auto_assign_ips();
+	out["ssoExempt"] = mc.sso_exepmt();
+	out["authenticationExpiryTime"] = mc.auth_expiry_time();
+	out["capabilities"] = OSUtils::jsonParse(mc.capabilities());
+	out["creationTime"] = mc.creation_time();
+	out["identity"] = mc.identity();
+	out["lastAuthorizedTime"] = mc.last_authorized_time();
+	out["lastDeauthorizedTime"] = mc.last_deauthorized_time();
+	out["remoteTraceLevel"] = mc.remote_trace_level();
+	out["revision"] = mc.revision();
+	out["tags"] = OSUtils::jsonParse(mc.tags());
+	out["versionMajor"] = mc.version_major();
+	out["versionMinor"] = mc.version_minor();
+	out["versionRev"] = mc.version_rev();
+	out["versionProtocol"] = mc.version_protocol();
+
+	return out;
 }
 
 }	// namespace ZeroTier

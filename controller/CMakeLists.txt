@@ -34,6 +34,7 @@ set(LINK_LIBS
 
 if (ZT1_CENTRAL_CONTROLLER)
     find_package(PostgreSQL REQUIRED)
+    find_package(protobuf REQUIRED)
 
     list(APPEND SRC_FILES
         CV1.cpp
@@ -64,7 +65,7 @@ if (ZT1_CENTRAL_CONTROLLER)
         ${PostgreSQL_INCLUDE_DIRS}
         "${redis++_BUILD_DIR}/src"
         ${pqxx_INCLUDE_DIRS}
-
+        "${CMAKE_CURRENT_BINARY_DIR}" 
     )
 
     list(APPEND LINK_LIBS
@@ -77,6 +78,16 @@ if (ZT1_CENTRAL_CONTROLLER)
 endif()
 
 add_library(zerotier-controller STATIC ${SRC_FILES})
+
+if (ZT1_CENTRAL_CONTROLLER)
+    file(GLOB PROTO_FILES "${CMAKE_CURRENT_SOURCE_DIR}/protobuf/*.proto")
+    protobuf_generate(
+        TARGET zerotier-controller
+        LANGUAGE cpp
+        PROTOS ${PROTO_FILES}
+        APPEND_PATH
+    )
+endif()
 
 target_include_directories(zerotier-controller PRIVATE ${INCLUDE_DIRS})
 

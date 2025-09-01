@@ -6,6 +6,8 @@
 #include "NotificationListener.hpp"
 #include "rustybits.h"
 
+#include <google/cloud/pubsub/admin/subscription_admin_client.h>
+#include <google/cloud/pubsub/subscriber.h>
 #include <memory>
 #include <string>
 #include <thread>
@@ -15,6 +17,8 @@ class DB;
 
 struct PubSubConfig {
 	const char* controller_id;
+	std::string project;
+	std::string topic;
 	uint64_t listen_timeout;
 };
 
@@ -23,11 +27,25 @@ struct PubSubConfig {
  */
 class PubSubListener : public NotificationListener {
   public:
-	virtual ~PubSubListener()
-	{
-	}
+	PubSubListener(std::string controller_id, std::string project, std::string topic);
+	virtual ~PubSubListener();
 
 	virtual void onNotification(const std::string& payload) = 0;
+
+  protected:
+	std::string _controller_id;
+	std::string _project;
+	std::string _topic;
+	std::string _subscription_id;
+
+  private:
+	void subscribe();
+	bool _run = false;
+	google::cloud::pubsub_admin::SubscriptionAdminClient _adminClient;
+	google::cloud::pubsub::Subscription _subscription;
+	std::shared_ptr<google::cloud::pubsub::Subscriber> _subscriber;
+	google::cloud::future<google::cloud::Status> _session;
+	std::thread _subscriberThread;
 };
 
 /**
@@ -35,21 +53,13 @@ class PubSubListener : public NotificationListener {
  */
 class PubSubNetworkListener : public PubSubListener {
   public:
-	PubSubNetworkListener(std::string controller_id, uint64_t listen_timeout, DB* db);
+	PubSubNetworkListener(std::string controller_id, std::string project, DB* db);
 	virtual ~PubSubNetworkListener();
 
 	virtual void onNotification(const std::string& payload) override;
 
   private:
-	void listenThread();
-	void changeHandlerThread();
-
-	bool _run = false;
-	std::string _controller_id;
 	DB* _db;
-	const rustybits::NetworkListener* _listener;
-	std::thread _listenThread;
-	std::thread _changeHandlerThread;
 };
 
 /**
@@ -57,21 +67,13 @@ class PubSubNetworkListener : public PubSubListener {
  */
 class PubSubMemberListener : public PubSubListener {
   public:
-	PubSubMemberListener(std::string controller_id, uint64_t listen_timeout, DB* db);
+	PubSubMemberListener(std::string controller_id, std::string project, DB* db);
 	virtual ~PubSubMemberListener();
 
 	virtual void onNotification(const std::string& payload) override;
 
   private:
-	void listenThread();
-	void changeHandlerThread();
-
-	bool _run = false;
-	std::string _controller_id;
 	DB* _db;
-	const rustybits::MemberListener* _listener;
-	std::thread _listenThread;
-	std::thread _changeHandlerThread;
 };
 
 }	// namespace ZeroTier
