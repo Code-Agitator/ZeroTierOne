@@ -10,6 +10,7 @@
 #include "DB.hpp"
 #include "NotificationListener.hpp"
 #include "PostgreSQL.hpp"
+#include "StatusWriter.hpp"
 
 #include <memory>
 #include <pqxx/pqxx>
@@ -24,12 +25,14 @@ namespace ZeroTier {
 struct RedisConfig;
 struct PubSubConfig;
 struct PostgresNotifyConfig;
+struct BigTableConfig;
 
 struct ControllerConfig {
 	bool ssoEnabled;
 	RedisConfig* redisConfig;
 	PubSubConfig* pubSubConfig;
 	PostgresNotifyConfig* postgresNotifyConfig;
+	BigTableConfig* bigTableConfig;
 };
 
 class CentralDB : public DB {
@@ -40,7 +43,19 @@ class CentralDB : public DB {
 		LISTENER_MODE_PUBSUB = 2,
 	};
 
-	CentralDB(const Identity& myId, const char* path, int listenPort, CentralDB::ListenerMode mode, ControllerConfig* cc);
+	enum StatusWriterMode {
+		STATUS_WRITER_MODE_PGSQL = 0,
+		STATUS_WRITER_MODE_REDIS = 1,
+		STATUS_WRITER_MODE_BIGTABLE = 2,
+	};
+
+	CentralDB(
+		const Identity& myId,
+		const char* path,
+		int listenPort,
+		CentralDB::ListenerMode mode,
+		CentralDB::StatusWriterMode statusMode,
+		ControllerConfig* cc);
 	virtual ~CentralDB();
 
 	virtual bool waitForReady();
@@ -49,7 +64,11 @@ class CentralDB : public DB {
 	virtual void eraseNetwork(const uint64_t networkId);
 	virtual void eraseMember(const uint64_t networkId, const uint64_t memberId);
 	virtual void nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress& physicalAddress);
-	virtual void nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress& physicalAddress, const char* osArch);
+	virtual void nodeIsOnline(
+		const uint64_t networkId,
+		const uint64_t memberId,
+		const InetAddress& physicalAddress,
+		const char* osArch);
 	virtual AuthInfo getSSOAuthInfo(const nlohmann::json& member, const std::string& redirectURL);
 
 	virtual bool ready()
@@ -82,9 +101,6 @@ class CentralDB : public DB {
 
 	void commitThread();
 	void onlineNotificationThread();
-	void onlineNotification_Postgres();
-	void onlineNotification_Redis();
-	uint64_t _doRedisUpdate(sw::redis::Transaction& tx, std::string& controllerId, std::unordered_map<std::pair<uint64_t, uint64_t>, NodeOnlineRecord, _PairHasher>& lastOnline);
 
 	void configureSmee();
 	void notifyNewMember(const std::string& networkID, const std::string& memberID);
@@ -92,6 +108,7 @@ class CentralDB : public DB {
 	enum OverrideMode { ALLOW_PGBOUNCER_OVERRIDE = 0, NO_OVERRIDE = 1 };
 
 	ListenerMode _listenerMode;
+	StatusWriterMode _statusWriterMode;
 	ControllerConfig* _controllerConfig;
 	std::shared_ptr<ConnectionPool<PostgresConnection> > _pool;
 
@@ -105,6 +122,7 @@ class CentralDB : public DB {
 	std::thread _heartbeatThread;
 	std::shared_ptr<NotificationListener> _membersDbWatcher;
 	std::shared_ptr<NotificationListener> _networksDbWatcher;
+	std::shared_ptr<StatusWriter> _statusWriter;
 	std::thread _commitThread[ZT_CENTRAL_CONTROLLER_COMMIT_THREADS];
 	std::thread _onlineNotificationThread;
 

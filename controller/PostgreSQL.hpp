@@ -61,7 +61,9 @@ class PostgresConnFactory : public ConnectionFactory {
 
 template <typename T> class MemberNotificationReceiver : public pqxx::notification_receiver {
   public:
-	MemberNotificationReceiver(T* p, pqxx::connection& c, const std::string& channel) : pqxx::notification_receiver(c, channel), _psql(p)
+	MemberNotificationReceiver(T* p, pqxx::connection& c, const std::string& channel)
+		: pqxx::notification_receiver(c, channel)
+		, _psql(p)
 	{
 		fprintf(stderr, "initialize MemberNotificationReceiver\n");
 	}
@@ -118,7 +120,9 @@ template <typename T> class MemberNotificationReceiver : public pqxx::notificati
 
 template <typename T> class NetworkNotificationReceiver : public pqxx::notification_receiver {
   public:
-	NetworkNotificationReceiver(T* p, pqxx::connection& c, const std::string& channel) : pqxx::notification_receiver(c, channel), _psql(p)
+	NetworkNotificationReceiver(T* p, pqxx::connection& c, const std::string& channel)
+		: pqxx::notification_receiver(c, channel)
+		, _psql(p)
 	{
 		fprintf(stderr, "initialize NetworkrNotificationReceiver\n");
 	}
@@ -187,6 +191,7 @@ struct NodeOnlineRecord {
 	uint64_t lastSeen;
 	InetAddress physicalAddress;
 	std::string osArch;
+	std::string version;
 };
 
 /**
@@ -194,7 +199,9 @@ struct NodeOnlineRecord {
  */
 template <typename T> class _notificationReceiver : public pqxx::notification_receiver {
   public:
-	_notificationReceiver(T* p, pqxx::connection& c, const std::string& channel) : pqxx::notification_receiver(c, channel), _listener(p)
+	_notificationReceiver(T* p, pqxx::connection& c, const std::string& channel)
+		: pqxx::notification_receiver(c, channel)
+		, _listener(p)
 	{
 		fprintf(stderr, "initialize PostgresMemberNotificationListener::_notificationReceiver\n");
 	}
@@ -214,7 +221,11 @@ template <typename T> class _notificationReceiver : public pqxx::notification_re
 
 class PostgresMemberListener : public NotificationListener {
   public:
-	PostgresMemberListener(DB* db, std::shared_ptr<ConnectionPool<PostgresConnection> > pool, const std::string& channel, uint64_t timeout);
+	PostgresMemberListener(
+		DB* db,
+		std::shared_ptr<ConnectionPool<PostgresConnection> > pool,
+		const std::string& channel,
+		uint64_t timeout);
 	virtual ~PostgresMemberListener();
 
 	virtual void listen();
@@ -233,7 +244,11 @@ class PostgresMemberListener : public NotificationListener {
 
 class PostgresNetworkListener : public NotificationListener {
   public:
-	PostgresNetworkListener(DB* db, std::shared_ptr<ConnectionPool<PostgresConnection> > pool, const std::string& channel, uint64_t timeout);
+	PostgresNetworkListener(
+		DB* db,
+		std::shared_ptr<ConnectionPool<PostgresConnection> > pool,
+		const std::string& channel,
+		uint64_t timeout);
 	virtual ~PostgresNetworkListener();
 
 	virtual void listen();
