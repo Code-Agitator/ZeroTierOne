@@ -1790,6 +1790,60 @@ class OneServiceImpl : public OneService {
 				_node->setPhysicalPathConfiguration(
 					reinterpret_cast<const struct sockaddr_storage*>(&(i->first)), &(i->second));
 		}
+
+#ifdef ZT1_CENTRAL_CONTROLLER
+		// Central Controller Mode Settings
+		json& cc = lc["controller"];
+		if (cc.is_object()) {
+			_controllerConfig.listenMode = OSUtils::jsonString(cc["listenMode"], "pgsql");
+			_controllerConfig.statusMode = OSUtils::jsonString(cc["statusMode"], "pgsql");
+
+			// redis settings
+			if (cc["redis"].is_object() && _rc == NULL) {
+				json& redis = cc["redis"];
+				_rc = new RedisConfig;
+				_rc->hostname = OSUtils::jsonString(redis["hostname"], "");
+				_rc->port = OSUtils::jsonInt(redis["port"], 6379);
+				_rc->password = OSUtils::jsonString(redis["password"], "");
+				_rc->clusterMode = OSUtils::jsonBool(redis["clusterMode"], false);
+				_controllerConfig.redisConfig = _rc;
+			}
+			else if (cc["redis"].is_object() && _rc != NULL) {
+				_controllerConfig.redisConfig = _rc;
+			}
+			if ((_controllerConfig.listenMode == "redis" || _controllerConfig.statusMode == "redis")
+				&& ! _controllerConfig.redisConfig) {
+				fprintf(
+					stderr,
+					"ERROR: redis listenMode or statusMode requires redis configuration in local.conf" ZT_EOL_S);
+				exit(1);
+			}
+
+			// pubsub settings
+			if (cc["pubsub"].is_object()) {
+				json& ps = cc["pubsub"];
+				_controllerConfig.pubSubConfig = new PubSubConfig();
+				_controllerConfig.pubSubConfig->project_id = OSUtils::jsonString(ps["project_id"], "");
+			}
+			if (_controllerConfig.listenMode == "pubsub" && ! _controllerConfig.pubSubConfig) {
+				fprintf(stderr, "ERROR: pubsub listenMode requires pubsub configuration in local.conf" ZT_EOL_S);
+				exit(1);
+			}
+
+			// bigtable settings
+			if (cc["bigtable"].is_object()) {
+				json& bt = cc["bigtable"];
+				_controllerConfig.bigTableConfig = new BigTableConfig();
+				_controllerConfig.bigTableConfig->project_id = OSUtils::jsonString(bt["project_id"], "");
+				_controllerConfig.bigTableConfig->instance_id = OSUtils::jsonString(bt["instance_id"], "");
+				_controllerConfig.bigTableConfig->table_id = OSUtils::jsonString(bt["table_id"], "");
+			}
+			if (_controllerConfig.listenMode == "bigtable" && ! _controllerConfig.bigTableConfig) {
+				fprintf(stderr, "ERROR: bigtable listenMode requires bigtable configuration in local.conf" ZT_EOL_S);
+				exit(1);
+			}
+		}
+#endif
 	}
 
 	virtual ReasonForTermination reasonForTermination() const

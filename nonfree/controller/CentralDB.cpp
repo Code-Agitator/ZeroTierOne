@@ -184,9 +184,9 @@ CentralDB::CentralDB(
 		case LISTENER_MODE_PUBSUB:
 			if (cc->pubSubConfig != NULL) {
 				_membersDbWatcher =
-					std::make_shared<PubSubMemberListener>(_myAddressStr, cc->pubSubConfig->project, this);
+					std::make_shared<PubSubMemberListener>(_myAddressStr, cc->pubSubConfig->project_id, this);
 				_networksDbWatcher =
-					std::make_shared<PubSubNetworkListener>(_myAddressStr, cc->pubSubConfig->project, this);
+					std::make_shared<PubSubNetworkListener>(_myAddressStr, cc->pubSubConfig->project_id, this);
 			}
 			else {
 				throw std::runtime_error(

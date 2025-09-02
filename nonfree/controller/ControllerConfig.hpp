@@ -8,11 +8,7 @@
 namespace ZeroTier {
 
 struct PubSubConfig {
-	std::string project;
-};
-
-struct PostgresNotifyConfig {
-	std::string channel;
+	std::string project_id;
 };
 
 struct BigTableConfig {
@@ -27,7 +23,6 @@ struct ControllerConfig {
 	std::string statusMode;
 	RedisConfig* redisConfig;
 	PubSubConfig* pubSubConfig;
-	PostgresNotifyConfig* postgresNotifyConfig;
 	BigTableConfig* bigTableConfig;
 
 	ControllerConfig()
@@ -36,7 +31,6 @@ struct ControllerConfig {
 		, statusMode("")
 		, redisConfig(nullptr)
 		, pubSubConfig(nullptr)
-		, postgresNotifyConfig(nullptr)
 		, bigTableConfig(nullptr)
 	{
 	}
@@ -50,10 +44,6 @@ struct ControllerConfig {
 		if (pubSubConfig) {
 			delete pubSubConfig;
 			pubSubConfig = nullptr;
-		}
-		if (postgresNotifyConfig) {
-			delete postgresNotifyConfig;
-			postgresNotifyConfig = nullptr;
 		}
 		if (bigTableConfig) {
 			delete bigTableConfig;
