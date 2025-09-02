@@ -54,3 +54,35 @@ cmake --build build/ --target all -j8 --verbose
 ## Packaging via Docker
 
 TODO: write me
+
+
+## Configuration
+
+Central Controller has new configuration options outside of the normal "settings" block of `local.conf`.
+
+```json
+{
+  "settings": { 
+    ...standard zt1 local.conf settings... 
+  },
+  "controller": {
+    "listenMode": (pgsql|redis|pubsub),
+    "statusMode": (pgsql|redis|bigtable),
+    "redis": {
+      "hostname": ...,
+      "port": 6379,
+      "clusterMode": true
+    },
+    "pubsub": {
+      "project_id": <gcp-project-id>
+    },
+    "bigtable": {
+      "project_id": <gcp-project-id>,
+      "instance_id": <bigtable-instance-id>,
+      "table_id": <bigtable-table-id>
+    }
+  }
+}
+```
+
+Configuration checks for invalid configurations like `listenMode = "pubsub"`, but without a `"pubsub"` config block.
