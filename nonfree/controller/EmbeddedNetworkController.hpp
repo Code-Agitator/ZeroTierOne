@@ -30,6 +30,10 @@ namespace ZeroTier {
 class Node;
 struct RedisConfig;
 
+#ifdef ZT1_CENTRAL_CONTROLLER
+class ControllerConfig;
+#endif
+
 class EmbeddedNetworkController
 	: public NetworkController
 	, public DB::ChangeListener {
@@ -39,6 +43,14 @@ class EmbeddedNetworkController
 	 * @param dbPath Database path (file path or database credentials)
 	 */
 	EmbeddedNetworkController(Node* node, const char* ztPath, const char* dbPath, int listenPort, RedisConfig* rc);
+#ifdef ZT1_CENTRAL_CONTROLLER
+	EmbeddedNetworkController(
+		Node* node,
+		const char* ztPath,
+		const char* dbPath,
+		int listenPort,
+		const ControllerConfig* cc);
+#endif
 	virtual ~EmbeddedNetworkController();
 
 	virtual void init(const Identity& signingId, Sender* sender);
@@ -146,6 +158,9 @@ class EmbeddedNetworkController
 	std::mutex _expiringSoon_l;
 
 	RedisConfig* _rc;
+#ifdef ZT1_CENTRAL_CONTROLLER
+	const ControllerConfig* _cc;
+#endif
 	std::string _ssoRedirectURL;
 
 	bool _ssoExpiryRunning;

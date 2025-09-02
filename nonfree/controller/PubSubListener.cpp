@@ -1,6 +1,7 @@
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 #include "PubSubListener.hpp"
 
+#include "ControllerConfig.hpp"
 #include "DB.hpp"
 #include "member.pb.h"
 #include "network.pb.h"

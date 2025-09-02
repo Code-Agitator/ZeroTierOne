@@ -21,19 +21,8 @@ struct SmeeClient;
 }
 
 namespace ZeroTier {
-
 struct RedisConfig;
-struct PubSubConfig;
-struct PostgresNotifyConfig;
-struct BigTableConfig;
-
-struct ControllerConfig {
-	bool ssoEnabled;
-	RedisConfig* redisConfig;
-	PubSubConfig* pubSubConfig;
-	PostgresNotifyConfig* postgresNotifyConfig;
-	BigTableConfig* bigTableConfig;
-};
+struct ControllerConfig;
 
 class CentralDB : public DB {
   public:
@@ -51,11 +40,11 @@ class CentralDB : public DB {
 
 	CentralDB(
 		const Identity& myId,
-		const char* path,
+		const char* connString,
 		int listenPort,
 		CentralDB::ListenerMode mode,
 		CentralDB::StatusWriterMode statusMode,
-		ControllerConfig* cc);
+		const ControllerConfig* cc);
 	virtual ~CentralDB();
 
 	virtual bool waitForReady();
@@ -109,7 +98,7 @@ class CentralDB : public DB {
 
 	ListenerMode _listenerMode;
 	StatusWriterMode _statusWriterMode;
-	ControllerConfig* _controllerConfig;
+	const ControllerConfig* _cc;
 	std::shared_ptr<ConnectionPool<PostgresConnection> > _pool;
 
 	const Identity _myId;
@@ -136,7 +125,6 @@ class CentralDB : public DB {
 	int _listenPort;
 	uint8_t _ssoPsk[48];
 
-	RedisConfig* _rc;
 	std::shared_ptr<sw::redis::Redis> _redis;
 	std::shared_ptr<sw::redis::RedisCluster> _cluster;
 	bool _redisMemberStatus;

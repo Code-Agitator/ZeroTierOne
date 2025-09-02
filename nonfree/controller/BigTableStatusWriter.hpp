@@ -7,11 +7,6 @@
 #include <string>
 
 namespace ZeroTier {
-struct BigTableConfig {
-	std::string project_id;
-	std::string instance_id;
-	std::string table_id;
-};
 
 class BigTableStatusWriter : public StatusWriter {
   public:

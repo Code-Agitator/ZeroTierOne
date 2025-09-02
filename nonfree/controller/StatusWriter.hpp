@@ -14,7 +14,7 @@ namespace ZeroTier {
  */
 class StatusWriter {
   public:
-	virtual ~StatusWriter() = 0;
+	virtual ~StatusWriter() = default;
 
 	virtual void updateNodeStatus(
 		const std::string& network_id,

@@ -41,6 +41,7 @@ if (ZT1_CENTRAL_CONTROLLER)
         CV2.hpp
         CentralDB.cpp
         CentralDB.hpp
+        ControllerConfig.hpp
         NotificationListener.hpp
         PostgreSQL.cpp
         PostgreSQL.hpp
@@ -55,6 +56,7 @@ if (ZT1_CENTRAL_CONTROLLER)
         BigTableStatusWriter.hpp
         PostgresStatusWriter.cpp
         PostgresStatusWriter.hpp
+        Redis.hpp
         RedisStatusWriter.cpp
         RedisStatusWriter.hpp
     )

@@ -19,6 +19,7 @@
 #include "../../node/SHA512.hpp"
 #include "../../version.h"
 #include "BigTableStatusWriter.hpp"
+#include "ControllerConfig.hpp"
 #include "CtlUtil.hpp"
 #include "EmbeddedNetworkController.hpp"
 #include "PostgresStatusWriter.hpp"
@@ -55,15 +56,15 @@ using ItemStream = std::vector<Item>;
 
 CentralDB::CentralDB(
 	const Identity& myId,
-	const char* path,
+	const char* connString,
 	int listenPort,
 	CentralDB::ListenerMode listenMode,
 	CentralDB::StatusWriterMode statusMode,
-	ControllerConfig* cc)
+	const ControllerConfig* cc)
 	: DB()
 	, _listenerMode(listenMode)
 	, _statusWriterMode(statusMode)
-	, _controllerConfig(cc)
+	, _cc(cc)
 	, _pool()
 	, _myId(myId)
 	, _myAddress(myId.address())
@@ -72,7 +73,6 @@ CentralDB::CentralDB(
 	, _run(1)
 	, _waitNoticePrinted(false)
 	, _listenPort(listenPort)
-	, _rc(cc->redisConfig)
 	, _redis(NULL)
 	, _cluster(NULL)
 	, _redisMemberStatus(false)
@@ -87,7 +87,7 @@ CentralDB::CentralDB(
 
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
-	_connString = std::string(path);
+	_connString = std::string(connString);
 	auto f = std::make_shared<PostgresConnFactory>(_connString);
 	_pool =
 		std::make_shared<ConnectionPool<PostgresConnection> >(15, 5, std::static_pointer_cast<ConnectionFactory>(f));
@@ -126,15 +126,15 @@ CentralDB::CentralDB(
 	}
 	_pool->unborrow(c);
 
-	if ((listenMode == LISTENER_MODE_REDIS || statusMode == STATUS_WRITER_MODE_REDIS) && _rc != NULL) {
+	if ((listenMode == LISTENER_MODE_REDIS || statusMode == STATUS_WRITER_MODE_REDIS) && _cc->redisConfig != NULL) {
 		auto innerspan = tracer->StartSpan("CentralDB::CentralDB::configureRedis");
 		auto innerscope = tracer->WithActiveSpan(innerspan);
 
 		sw::redis::ConnectionOptions opts;
 		sw::redis::ConnectionPoolOptions poolOpts;
-		opts.host = _rc->hostname;
-		opts.port = _rc->port;
-		opts.password = _rc->password;
+		opts.host = _cc->redisConfig->hostname;
+		opts.port = _cc->redisConfig->port;
+		opts.password = _cc->redisConfig->password;
 		opts.db = 0;
 		opts.keep_alive = true;
 		opts.connect_timeout = std::chrono::seconds(3);
@@ -142,7 +142,7 @@ CentralDB::CentralDB(
 		poolOpts.wait_timeout = std::chrono::seconds(5);
 		poolOpts.connection_lifetime = std::chrono::minutes(3);
 		poolOpts.connection_idle_time = std::chrono::minutes(1);
-		if (_rc->clusterMode) {
+		if (_cc->redisConfig->clusterMode) {
 			innerspan->SetAttribute("cluster_mode", "true");
 			fprintf(stderr, "Using Redis in Cluster Mode\n");
 			_cluster = std::make_shared<sw::redis::RedisCluster>(opts, poolOpts);
@@ -168,8 +168,8 @@ CentralDB::CentralDB(
 
 	switch (listenMode) {
 		case LISTENER_MODE_REDIS:
-			if (_rc != NULL) {
-				if (_rc->clusterMode) {
+			if (_cc->redisConfig != NULL) {
+				if (_cc->redisConfig->clusterMode) {
 					_membersDbWatcher = std::make_shared<RedisMemberListener>(_myAddressStr, _cluster, this);
 					_networksDbWatcher = std::make_shared<RedisNetworkListener>(_myAddressStr, _cluster, this);
 				}
@@ -202,8 +202,8 @@ CentralDB::CentralDB(
 
 	switch (statusMode) {
 		case STATUS_WRITER_MODE_REDIS:
-			if (_rc != NULL) {
-				if (_rc->clusterMode) {
+			if (_cc->redisConfig != NULL) {
+				if (_cc->redisConfig->clusterMode) {
 					_statusWriter = std::make_shared<RedisStatusWriter>(_cluster, _myAddressStr);
 				}
 				else {
@@ -441,7 +441,7 @@ void CentralDB::nodeIsOnline(const uint64_t networkId, const uint64_t memberId, 
 
 AuthInfo CentralDB::getSSOAuthInfo(const nlohmann::json& member, const std::string& redirectURL)
 {
-	if (_controllerConfig->ssoEnabled) {
+	if (_cc->ssoEnabled) {
 		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 		auto tracer = provider->GetTracer("CentralDB");
 		auto span = tracer->StartSpan("CentralDB::getSSOAuthInfo");
@@ -797,7 +797,7 @@ void CentralDB::initializeMembers()
 
 			if (! deletes.empty()) {
 				try {
-					if (_rc->clusterMode) {
+					if (_cc->redisConfig->clusterMode) {
 						auto tx = _cluster->transaction(_myAddressStr, true, false);
 						for (std::string k : deletes) {
 							tx.del(k);
@@ -961,7 +961,7 @@ void CentralDB::initializeMembers()
 			if (! networkMembers.empty()) {
 				if (_redisMemberStatus) {
 					fprintf(stderr, "Load member data into redis...\n");
-					if (_rc->clusterMode) {
+					if (_cc->redisConfig->clusterMode) {
 						auto tx = _cluster->transaction(_myAddressStr, true, false);
 						uint64_t count = 0;
 						for (auto it : networkMembers) {
@@ -1071,7 +1071,7 @@ void CentralDB::heartbeat()
 
 		try {
 			if (_listenerMode == LISTENER_MODE_REDIS && _redisMemberStatus) {
-				if (_rc->clusterMode) {
+				if (_cc->redisConfig->clusterMode) {
 					_cluster->zadd("controllers", "controllerId", ts);
 				}
 				else {
@@ -1298,7 +1298,7 @@ void CentralDB::commitThread()
 						std::string id = config["id"];
 						std::string controllerId = _myAddressStr.c_str();
 						std::string key = "networks:{" + controllerId + "}";
-						if (_rc->clusterMode) {
+						if (_cc->redisConfig->clusterMode) {
 							_cluster->sadd(key, id);
 						}
 						else {
@@ -1340,7 +1340,7 @@ void CentralDB::commitThread()
 						std::string id = config["id"];
 						std::string controllerId = _myAddressStr.c_str();
 						std::string key = "networks:{" + controllerId + "}";
-						if (_rc->clusterMode) {
+						if (_cc->redisConfig->clusterMode) {
 							_cluster->srem(key, id);
 							_cluster->del("network-nodes-online:{" + controllerId + "}:" + id);
 						}
@@ -1392,7 +1392,7 @@ void CentralDB::commitThread()
 						std::string networkId = config["nwid"];
 						std::string controllerId = _myAddressStr.c_str();
 						std::string key = "network-nodes-all:{" + controllerId + "}:" + networkId;
-						if (_rc->clusterMode) {
+						if (_cc->redisConfig->clusterMode) {
 							_cluster->srem(key, memberId);
 							_cluster->del("member:{" + controllerId + "}:" + networkId + ":" + memberId);
 						}

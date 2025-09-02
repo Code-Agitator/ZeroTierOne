@@ -35,6 +35,7 @@ if(ZT1_CENTRAL_CONTROLLER)
     )
     list(APPEND LINK_LIBS
         pqxx
+        redis++::redis++_static
         opentelemetry-cpp::sdk
     )
 endif()

@@ -26,6 +26,10 @@
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 #include "CV1.hpp"
 #include "CV2.hpp"
+#include "CentralDB.hpp"
+#ifdef ZT1_CENTRAL_CONTROLLER
+#include "ControllerConfig.hpp"
+#endif
 #endif
 
 #include "../../node/CertificateOfMembership.hpp"
@@ -559,6 +563,61 @@ EmbeddedNetworkController::EmbeddedNetworkController(
 {
 }
 
+#ifdef ZT1_CENTRAL_CONTROLLER
+EmbeddedNetworkController::EmbeddedNetworkController(
+	Node* node,
+	const char* ztPath,
+	const char* dbPath,
+	int listenPort,
+	const ControllerConfig* cc)
+	: _startTime(OSUtils::now())
+	, _listenPort(listenPort)
+	, _node(node)
+	, _ztPath(ztPath)
+	, _path(dbPath)
+	, _signingId()
+	, _signingIdAddressString()
+	, _sender((NetworkController::Sender*)0)
+	, _db(this)
+	, _queue()
+	, _threads()
+	, _threads_l()
+	, _memberStatus()
+	, _memberStatus_l()
+	, _expiringSoon()
+	, _expiringSoon_l()
+	, _rc(nullptr)
+	, _cc(cc)
+	, _ssoExpiryRunning(true)
+	, _ssoExpiry(std::thread(&EmbeddedNetworkController::_ssoExpiryThread, this))
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
+	, _member_status_lookup { "nc_member_status_lookup", "" }
+	, _member_status_lookup_count { "nc_member_status_lookup_count", "" }
+	, _node_is_online { "nc_node_is_online", "" }
+	, _node_is_online_count { "nc_node_is_online_count", "" }
+	, _get_and_init_member { "nc_get_and_init_member", "" }
+	, _get_and_init_member_count { "nc_get_and_init_member_count", "" }
+	, _have_identity { "nc_have_identity", "" }
+	, _have_identity_count { "nc_have_identity_count", "" }
+	, _determine_auth { "nc_determine_auth", "" }
+	, _determine_auth_count { "nc_determine_auth_count", "" }
+	, _sso_check { "nc_sso_check", "" }
+	, _sso_check_count { "nc_sso_check_count", "" }
+	, _auth_check { "nc_auth_check", "" }
+	, _auth_check_count { "nc_auth_check_count", "" }
+	, _json_schlep { "nc_json_schlep", "" }
+	, _json_schlep_count { "nc_json_schlep_count", "" }
+	, _issue_certificate { "nc_issue_certificate", "" }
+	, _issue_certificate_count { "nc_issue_certificate_count", "" }
+	, _save_member { "nc_save_member", "" }
+	, _save_member_count { "nc_save_member_count", "" }
+	, _send_netconf { "nc_send_netconf2", "" }
+	, _send_netconf_count { "nc_send_netconf2_count", "" }
+#endif
+{
+}
+#endif
+
 EmbeddedNetworkController::~EmbeddedNetworkController()
 {
 	std::lock_guard<std::mutex> l(_threads_l);
@@ -587,6 +646,47 @@ void EmbeddedNetworkController::init(const Identity& signingId, Sender* sender)
 	_sender = sender;
 	_signingIdAddressString = signingId.address().toString(tmp);
 
+#ifdef ZT1_CENTRAL_CONTROLLER
+	if (! _cc) {
+		throw std::runtime_error("controller config required");
+	}
+
+	if (_path.length() > 9 || (_path.substr(0, 9) != "postgres:")) {
+		throw std::runtime_error("central controller requires postgres db");
+	}
+
+	const char* connString = _path.substr(9).c_str();
+
+	CentralDB::ListenerMode lm;
+	if (_cc->listenMode == "pgsql") {
+		lm = CentralDB::LISTENER_MODE_PGSQL;
+	}
+	else if (_cc->listenMode == "redis") {
+		lm = CentralDB::LISTENER_MODE_REDIS;
+	}
+	else if (_cc->listenMode == "pubsub") {
+		lm = CentralDB::LISTENER_MODE_PUBSUB;
+	}
+	else {
+		throw std::runtime_error("unsupported listen mode");
+	}
+
+	CentralDB::StatusWriterMode sm;
+	if (_cc->statusMode == "pgsql") {
+		sm = CentralDB::STATUS_WRITER_MODE_PGSQL;
+	}
+	else if (_cc->statusMode == "redis") {
+		sm = CentralDB::STATUS_WRITER_MODE_REDIS;
+	}
+	else if (_cc->statusMode == "bigtable") {
+		sm = CentralDB::STATUS_WRITER_MODE_BIGTABLE;
+	}
+	else {
+		throw std::runtime_error("unsupported status mode");
+	}
+
+	_db.addDB(std::shared_ptr<CentralDB>(new CentralDB(_signingId, connString, _listenPort, lm, sm, _cc)));
+#else
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	if ((_path.length() > 9) && (_path.substr(0, 9) == "postgres:")) {
 		fprintf(stderr, "CV1\n");
@@ -603,6 +703,7 @@ void EmbeddedNetworkController::init(const Identity& signingId, Sender* sender)
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	}
 #endif
+#endif	 // ZT1_CENTRAL_CONTROLLER
 
 	_db.waitForReady();
 }

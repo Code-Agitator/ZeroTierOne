@@ -130,6 +130,10 @@ using json = nlohmann::json;
 #include "../nonfree/controller/EmbeddedNetworkController.hpp"
 #include "../nonfree/controller/PostgreSQL.hpp"
 #include "../nonfree/controller/Redis.hpp"
+#ifdef ZT1_CENTRAL_CONTROLLER
+#include "../nonfree/controller/CentralDB.hpp"
+#include "../nonfree/controller/ControllerConfig.hpp"
+#endif
 #include "../osdep/EthernetTap.hpp"
 #ifdef __WINDOWS__
 #include "../osdep/WindowsEthernetTap.hpp"
@@ -1009,6 +1013,10 @@ class OneServiceImpl : public OneService {
 	double _exporterSampleRate;
 #endif
 
+#ifdef ZT1_CENTRAL_CONTROLLER
+	ControllerConfig _controllerConfig;
+#endif
+
 	// end member variables ----------------------------------------------------
 
 	OneServiceImpl(const char* hp, unsigned int port)
@@ -1055,6 +1063,9 @@ class OneServiceImpl : public OneService {
 		, _traceProvider(nullptr)
 		, _exporterEndpoint()
 		, _exporterSampleRate(1.0)
+#endif
+#ifdef ZT1_CENTRAL_CONTROLLER
+		, _controllerConfig()
 #endif
 	{
 		_ports[0] = 0;
@@ -1351,10 +1362,15 @@ class OneServiceImpl : public OneService {
 			// Delete legacy iddb.d if present (cleanup)
 			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
 
-			// Network controller is now enabled by default for desktop and server
+			// Network controller is now disabled by default for desktop and server
 #ifdef ZT_NONFREE_CONTROLLER
+#ifdef ZT1_CENTRAL_CONTROLLER
+			_controller = new EmbeddedNetworkController(
+				_node, _homePath.c_str(), _controllerDbPath.c_str(), _ports[0], &_controllerConfig);
+#else
 			_controller =
 				new EmbeddedNetworkController(_node, _homePath.c_str(), _controllerDbPath.c_str(), _ports[0], _rc);
+#endif
 			if (! _ssoRedirectURL.empty()) {
 				_controller->setSSORedirectURL(_ssoRedirectURL);
 			}

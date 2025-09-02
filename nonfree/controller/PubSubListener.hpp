@@ -15,13 +15,6 @@
 namespace ZeroTier {
 class DB;
 
-struct PubSubConfig {
-	const char* controller_id;
-	std::string project;
-	std::string topic;
-	uint64_t listen_timeout;
-};
-
 /**
  * Base class for GCP PubSub listeners
  */
