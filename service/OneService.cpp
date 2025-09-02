@@ -1766,8 +1766,6 @@ class OneServiceImpl : public OneService {
 					stderr,
 					"WARNING: OpenTelemetry exporter settings are not set. Traces will not be exported." ZT_EOL_S);
 			}
-#else
-			fprintf(stderr, "WARNING: OpenTelemetry support is not enabled. Traces will not be exported." ZT_EOL_S);
 #endif
 
 			// Bind to wildcard instead of to specific interfaces (disables full tunnel capability)
