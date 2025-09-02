@@ -9,6 +9,7 @@
 
 #include <google/cloud/pubsub/admin/subscription_admin_client.h>
 #include <google/cloud/pubsub/admin/subscription_admin_connection.h>
+#include <google/cloud/pubsub/admin/topic_admin_client.h>
 #include <google/cloud/pubsub/message.h>
 #include <google/cloud/pubsub/subscriber.h>
 #include <google/cloud/pubsub/subscription.h>
@@ -33,6 +34,29 @@ PubSubListener::PubSubListener(std::string controller_id, std::string project, s
 	, _subscription(pubsub::Subscription(_project, _subscription_id))
 {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+	// Create Topic if it doesn't exist
+	// this is only really needed for testing with the emulator
+	// in production the topic should be created via terraform or gcloud
+	// before starting the controller
+	auto topicAdminClient = pubsub_admin::TopicAdminClient(pubsub_admin::MakeTopicAdminConnection());
+	auto topicName = pubsub::Topic(project, topic).FullName();
+	auto topicResult = topicAdminClient.GetTopic(topicName);
+	if (! topicResult.ok()) {
+		// Only create if not found
+		if (topicResult.status().code() == google::cloud::StatusCode::kNotFound) {
+			auto createResult = topicAdminClient.CreateTopic(topicName);
+			if (! createResult.ok()) {
+				fprintf(stderr, "Failed to create topic: %s\n", createResult.status().message().c_str());
+				throw std::runtime_error("Failed to create topic");
+			}
+			fprintf(stderr, "Created topic: %s\n", topicName.c_str());
+		}
+		else {
+			fprintf(stderr, "Failed to get topic: %s\n", topicResult.status().message().c_str());
+			throw std::runtime_error("Failed to get topic");
+		}
+	}
 
 	google::pubsub::v1::Subscription request;
 	request.set_name(_subscription.FullName());
