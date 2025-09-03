@@ -49,7 +49,7 @@ jobs:
         source ~/miniconda3/etc/profile.d/conda.sh
         conda activate central_controller
         cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DZT1_CENTRAL_CONTROLLER=1
-        cmake --build . --config Release -- -j 4
+        cmake --build build/ --target all -j4 --verbose
     - name: SelfTest
       run: |
         ./build/zerotier-selftest
