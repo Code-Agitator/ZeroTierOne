@@ -7,7 +7,10 @@ on:
 jobs:
   central_controller:
     name: Central Controller Build
-    runs-on: [gha-runner-x64, gha-runner-arm64]
+    strategy:
+      matrix:
+        runner: [gha-runner-x64, gha-runner-arm64]
+    runs-on: ${{ matrix.runner }}
     steps:
     - name: checkout
       uses: actions/checkout@v4
