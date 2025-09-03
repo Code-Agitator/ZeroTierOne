@@ -95,9 +95,9 @@ if [ "$ZT_USE_PUBSUB" == "true" ]; then
     fi
 
     PUBSUB_CONF=", \"pubsub\": {
-            \"project\": \"${ZT_CTL_PUBSUB_PROJECT}\"
-        }
-    "
+        \"project\": \"${ZT_CTL_PUBSUB_PROJECT}\"
+    }
+"
 fi
 
 echo "{
