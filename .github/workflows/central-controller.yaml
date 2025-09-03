@@ -28,7 +28,6 @@ jobs:
     - name: Update Conda Environment
       run: |
         source ~/miniconda3/etc/profile.d/conda.sh
-        conda env activate central_controller
         conda env update --file environment.yml
     - name: Build
       run: |
