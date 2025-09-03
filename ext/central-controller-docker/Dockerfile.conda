@@ -17,7 +17,7 @@ ADD build/zerotier-one /usr/local/bin/zerotier-one
 RUN chmod a+x /usr/local/bin/zerotier-one
 RUN echo "/opt/conda/envs/central_controller/lib" > /etc/ld.so.conf.d/conda-central-controller.conf && ldconfig
 
-ADD ext/central-controller-docker/main.sh /
+ADD ext/central-controller-docker/main-new.sh /main.sh
 RUN chmod a+x /main.sh
 
 ENTRYPOINT ["/main.sh"]
