@@ -33,6 +33,11 @@ jobs:
         activate-environment: central_controller
         environment-file: environment.yml
         use-only-tar-bz2: false
+    - name: Activate Conda
+      run: |
+        echo "CONDA_BASE=$(conda info --base)" >> $GITHUB_ENV
+        source "$CONDA_BASE/etc/profile.d/conda.sh"
+        conda activate central_controller
     - name: Setup CMake
       uses: threeal/cmake-action@v2.1.0
       with:
