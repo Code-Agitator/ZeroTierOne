@@ -26,7 +26,7 @@ jobs:
         path: ${{ env.CONDA }}/envs
         key: ${{ runner.os }}-${{ runner.arch }}-conda-${{ hashFiles('environment.yml') }}
     - name: Update Conda Environment
-      run:
+      run: |
         source ~/miniconda3/etc/profile.d/conda.sh
         conda env activate central_controller
         conda env update --file environment.yml
