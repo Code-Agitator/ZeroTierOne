@@ -38,12 +38,12 @@ jobs:
     #     echo "CONDA_BASE=$(conda info --base)" >> $GITHUB_ENV
     #     source "$CONDA_BASE/etc/profile.d/conda.sh"
     #     conda activate central_controller
-    - name: Setup CMake
-      uses: threeal/cmake-action@v2.1.0
-      with:
-        options: |
-         CMAKE_BUILD_TYPE=Release
-         ZT1_CENTRAL_CONTROLLER=1
+    # - name: Setup CMake
+    #   uses: threeal/cmake-action@v2.1.0
+    #   with:
+    #     options: |
+    #      CMAKE_BUILD_TYPE=Release
+    #      ZT1_CENTRAL_CONTROLLER=1
     - name: Build
       run: |
         source ~/miniconda3/etc/profile.d/conda.sh
