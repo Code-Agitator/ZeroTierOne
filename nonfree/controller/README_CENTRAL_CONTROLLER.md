@@ -25,22 +25,8 @@ conda config --set channel_priority strict
 Install external dependencies:
 
 ```bash
-conda install -y -c conda-forge \
-    conda-forge::cmake \
-    conda-forge::git \
-    conda-forge::cxx-compiler \
-    conda-forge::c-compiler \
-    conda-forge::make \
-    conda-forge::pkg-config \
-    conda-forge::libpqxx=7.7.3 \
-    conda-forge::libopentelemetry-cpp=1.21.0 \
-    conda-forge::libopentelemetry-cpp-headers=1.21.0 \
-    conda-forge::google-cloud-cpp=2.39.0 \
-    conda-forge::libgoogle-cloud=2.39.0 \
-    conda-forge::rust=1.89.0 \
-    conda-forge::inja=3.3.0 \
-    conda-forge::libhiredis=1.3.0 \
-    conda-forge::nlohmann_json=3.12.0
+conda env create -f environment.yaml
+conda env activate central_controller
 ```
 
 ## Build the Central Controller Binary

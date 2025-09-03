@@ -1,0 +1,41 @@
+# on:
+#     workflow_dispatch:
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  central_controller:
+    name: Central Controller Build
+    runs-on: [gha-runner-x64, gha-runner-arm64]
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
+    - name: Get Date
+      id: get-date
+      run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
+      shell: bash
+    - name: Cache Conda
+      uses: actions/cache@v4
+      with:
+        path: ~/miniconda3
+        key: ${{ runner.os }}-${{ runner.arch }}-${{ steps.get-date.outputs.today }}-conda-${{ hashFiles('**/environment.yml') }}
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: false
+        channel-priority: strict
+        activate-environment: central_controller
+        environment-file: environment.yml
+        use-only-tar-bz2: true
+    - name: Setup CMake
+      uses: threeal/cmake-action@v2.1.0
+      with:
+        options: |
+         -DCMAKE_BUILD_TYPE=Release
+         -DZT1_CENTRAL_CONTROLLER=1
+    - name: Build
+      run: cmake --build . --config Release -- -j 4
+    - name: SelfTest
+      run: |
+        ./build/zerotier-selftest
