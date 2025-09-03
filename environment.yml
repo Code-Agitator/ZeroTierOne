@@ -11,7 +11,7 @@ dependencies:
   - conda-forge::libpqxx=7.7.3
   - conda-forge::libopentelemetry-cpp=1.21.0
   - conda-forge::libopentelemetry-cpp-headers=1.21.0
-  - conda-forge::google-cloud-cpp=2.39.0
+  - conda-forge::google-cloud-cpp=2.38.0
   - conda-forge::libgoogle-cloud=2.39.0
   - conda-forge::rust=1.89.0
   - conda-forge::inja=3.3.0
