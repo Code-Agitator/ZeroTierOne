@@ -79,10 +79,10 @@ if [ "$ZT_USE_BIGTABLE" == "true" ]; then
     fi
 
     BIGTABLE_CONF=", \"bigtable\": {
-            \"project\": \"${ZT_BIGTABLE_PROJECT}\",
-            \"instance\": \"${ZT_BIGTABLE_INSTANCE}\",
-            \"table\": \"${ZT_BIGTABLE_TABLE}\"
-        },
+        \"project\": \"${ZT_BIGTABLE_PROJECT}\",
+        \"instance\": \"${ZT_BIGTABLE_INSTANCE}\",
+        \"table\": \"${ZT_BIGTABLE_TABLE}\"
+    }
     "
 fi
 
