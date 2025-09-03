@@ -24,7 +24,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ env.CONDA }}/envs
-        key: ${{ runner.os }}-${{ runner.arch }}-conda-${{ hashFiles('environment.yml') }}
+        key: ${{ runner.os }}-${{ runner.arch }}-${{ github.ref_name }}-conda-${{ hashFiles('environment.yml') }}
     - name: Update Conda Environment
       run: |
         source ~/miniconda3/etc/profile.d/conda.sh
