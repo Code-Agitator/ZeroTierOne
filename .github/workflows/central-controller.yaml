@@ -26,6 +26,7 @@ jobs:
         path: ${{ env.CONDA }}/envs
         key: ${{ runner.os }}-${{ runner.arch }}-${{ github.ref_name }}-conda-${{ hashFiles('environment.yml') }}
     - name: Update Conda Environment
+      if: steps.cache.outputs.cache-hit != 'true'
       run: |
         source ~/miniconda3/etc/profile.d/conda.sh
         conda env update --file environment.yml
