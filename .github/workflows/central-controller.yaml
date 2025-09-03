@@ -14,36 +14,21 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v4
-    # - name: Get Date
-    #   id: get-date
-    #   run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
-    #   shell: bash
-    # - name: Cache Conda
-    #   uses: actions/cache@v4
-    #   with:
-    #     path: ~/miniconda3
-    #     key: ${{ runner.os }}-${{ runner.arch }}-${{ steps.get-date.outputs.today }}-conda-${{ hashFiles('**/environment.yml') }}
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v3
       with:
-        conda-remove-defaults: true
-        miniconda-version: "latest"
-        auto-update-conda: false
-        channel-priority: strict
+        miniconda-version: latest
         activate-environment: central_controller
-        environment-file: environment.yml
-        use-only-tar-bz2: false
-    # - name: Activate Conda
-    #   run: |
-    #     echo "CONDA_BASE=$(conda info --base)" >> $GITHUB_ENV
-    #     source "$CONDA_BASE/etc/profile.d/conda.sh"
-    #     conda activate central_controller
-    # - name: Setup CMake
-    #   uses: threeal/cmake-action@v2.1.0
-    #   with:
-    #     options: |
-    #      CMAKE_BUILD_TYPE=Release
-    #      ZT1_CENTRAL_CONTROLLER=1
+    - name: Conda Environment Cache
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.CONDA }}/envs
+        key: ${{ runner.os }}-${{ runner.arch }}-conda-${{ hashFiles('environment.yml') }}
+    - name: Update Conda Environment
+      run:
+        source ~/miniconda3/etc/profile.d/conda.sh
+        conda env update --file environment.yml
     - name: Build
       run: |
         source ~/miniconda3/etc/profile.d/conda.sh
