@@ -20,7 +20,7 @@ if(CPU_ARCHITECTURE STREQUAL "x86_64")
         -DZT_USE_FAST_X64_ED25519=1
     )
 elseif(CPU_ARCHITECTURE STREQUAL "aarch64")
-    add_definitions(-DZT_ARCHITECTURE=4 -DZT_ARCH_ARM_HAS_NEON=1 -DZT_SSO_SUPPORTED=1)
+    add_definitions(-DZT_ARCHITECTURE=4 -DZT_ARCH_ARM_HAS_NEON=1 -DZT_SSO_SUPPORTED=1 -DZT_AES_NEON=1)
     add_compile_options(-march=armv8-a+crypto -mtune=generic -mstrict-align)
 endif()
 

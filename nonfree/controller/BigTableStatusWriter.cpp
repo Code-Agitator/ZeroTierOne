@@ -1,5 +1,7 @@
 #include "BigTableStatusWriter.hpp"
 
+#include "ControllerConfig.hpp"
+
 #include <google/cloud/bigtable/mutations.h>
 #include <google/cloud/bigtable/row.h>
 #include <google/cloud/bigtable/table.h>
