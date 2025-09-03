@@ -27,6 +27,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3
       with:
         conda-remove-defaults: true
+        miniconda-version: "latest"
         auto-update-conda: false
         channel-priority: strict
         activate-environment: central_controller
