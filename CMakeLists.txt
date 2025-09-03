@@ -127,7 +127,8 @@ add_executable(zerotier-selftest
 )
 
 target_link_libraries(zerotier-selftest 
-    zerotier-core 
+    zerotier-core
+    zerotier-osdep
     Threads::Threads
     nlohmann_json::nlohmann_json 
     prometheus-cpp-lite

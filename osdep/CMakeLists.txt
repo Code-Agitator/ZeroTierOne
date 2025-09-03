@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(osdep LANGUAGES CXX ASM)
+project(zerotier-osdep LANGUAGES CXX ASM)
 
 set(SRC_FILES
     Arp.cpp
