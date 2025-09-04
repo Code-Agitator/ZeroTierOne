@@ -14,13 +14,18 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v4
-
+  
+    - name: GCP Auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.DOCKER_REGISTRY_WRITER}}
+  
     - name: Set up GCloud CLI
       uses: google-github-actions/setup-gcloud@v2
 
     - name: Docker Auth
       run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-      
+
     # - name: Setup Miniconda
     #   uses: conda-incubator/setup-miniconda@v3
     #   with:
@@ -62,12 +67,7 @@ jobs:
     - name: Build
       run: |
         docker build -t us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-${{ runner.arch }} -f ext/central-controller-docker/Dockerfile.new .
-    - name: GCP Auth
-      uses: google-github-actions/auth@v2
-      with:
-        credentials_json: ${{ secrets.DOCKER_REGISTRY_WRITER}}
 
-    
 
     - name: Build and push Docker Image
       run: |    
