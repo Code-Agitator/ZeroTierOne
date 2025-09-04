@@ -1,0 +1,11 @@
+FROM continuumio/miniconda3:25.3.1-1
+
+LABEL maintainer="ZeroTier Inc."
+
+ADD environment.yml /environment.yml
+RUN conda env create -f /environment.yml && \
+    conda clean -a -y
+
+ADD . /ZeroTierOne
+SHELL ["conda", "run", "--no-capture-output", "-n", "central_controller", "/bin/bash", "-c"]
+ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "central_controller", "/bin/bash"]
