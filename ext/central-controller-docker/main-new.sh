@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # conda init
-# conda activate central_controller
+conda activate central_controller
 
 if [ -z "$ZT_DB_HOST" ]; then
     echo '*** FAILED: ZT_DB_HOST environment variable not defined'
