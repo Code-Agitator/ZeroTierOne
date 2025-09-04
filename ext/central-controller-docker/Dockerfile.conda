@@ -6,19 +6,20 @@ FROM continuumio/miniconda3:25.3.1-1
 
 LABEL maintainer="ZeroTier Inc."
 
-ADD environment.yml /tmp/environment.yml
-
-RUN conda env create -f /tmp/environment.yml
+ADD environment.yml /environment.yml
+RUN conda env create -f /environment.yml && \
+    conda clean -a -y
+SHELL ["conda", "run", "--no-capture-output", "-n", "central_controller", "/bin/bash", "-c"]
 
 COPY --from=go_base /go/bin/migrate /usr/local/bin/migrate
 COPY ext/central-controller-docker/migrations /migrations
 ADD build/zerotier-one /usr/local/bin/zerotier-one
 RUN chmod a+x /usr/local/bin/zerotier-one
-# RUN echo "/opt/conda/envs/central_controller/lib" > /etc/ld.so.conf.d/conda-central-controller.conf
-# RUN echo "/opt/conda/envs/central_controller/x86_64-conda-linux-gnu/lib" > /etc/ld.so.conf.d/conda-central-controller-gnu.conf && ldconfig
+RUN echo "/opt/conda/envs/central_controller/lib" > /etc/ld.so.conf.d/conda-central-controller.conf && \
+    echo "/opt/conda/envs/central_controller/`uname -m`-conda-linux-gnu/lib" > /etc/ld.so.conf.d/conda-central-controller-x64.conf && \
+    ldconfig
+
 ADD ext/central-controller-docker/main-new.sh /main.sh
 RUN chmod a+x /main.sh
-
-SHELL ["conda", "run", "--no-capture-output", "-n", "central_controller", "/bin/bash", "-c"]
 
 ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "central_controller", "/main.sh"]
