@@ -43,7 +43,7 @@ endif()
 
 if(ZT1_CENTRAL_CONTROLLER)
     find_package(PostgreSQL REQUIRED)
-    find_package(opentelemetry-cpp REQUIRED COMPONENTS api sdk)
+    find_package(opentelemetry-cpp REQUIRED COMPONENTS api sdk exporters_otlp_grpc exporters_otlp_http exporters_prometheus )
     find_package(google_cloud_cpp_bigtable REQUIRED)
     find_package(google_cloud_cpp_pubsub REQUIRED)
 else()
@@ -110,7 +110,18 @@ set(LINKED_LIBRARIES
 
 if(ZT1_CENTRAL_CONTROLLER)
     list(APPEND LINKED_LIBRARIES 
-        opentelemetry-cpp::sdk)
+        opentelemetry-cpp::sdk
+        opentelemetry-cpp::trace
+        opentelemetry-cpp::proto_grpc
+        opentelemetry-cpp::otlp_grpc_client
+        opentelemetry-cpp::otlp_grpc_exporter
+        opentelemetry-cpp::otlp_grpc_log_record_exporter
+	    opentelemetry-cpp::otlp_grpc_metrics_exporter
+        opentelemetry-cpp::otlp_http_exporter
+	    opentelemetry-cpp::otlp_http_log_record_exporter
+	    opentelemetry-cpp::otlp_http_metric_exporter
+        opentelemetry-cpp::prometheus_exporter
+        )
 endif()
 
 
