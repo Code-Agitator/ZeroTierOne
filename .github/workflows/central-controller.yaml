@@ -26,31 +26,6 @@ jobs:
     - name: Docker Auth
       run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-    # - name: Setup Miniconda
-    #   uses: conda-incubator/setup-miniconda@v3
-    #   with:
-    #     miniconda-version: latest
-    #     activate-environment: central_controller
-    # - name: Conda Environment Cache
-    #   id: cache
-    #   uses: actions/cache@v4
-    #   with:
-    #     path: ${{ env.CONDA }}/envs
-    #     key: ${{ runner.os }}-${{ runner.arch }}-${{ github.ref_name }}-conda-${{ hashFiles('environment.yml') }}
-    # - name: Update Conda Environment
-    #   if: steps.cache.outputs.cache-hit != 'true'
-    #   run: |
-    #     source ~/miniconda3/etc/profile.d/conda.sh
-    #     conda env update --file environment.yml
-    # - name: Build
-    #   run: |
-    #     source ~/miniconda3/etc/profile.d/conda.sh
-    #     conda activate central_controller
-    #     cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DZT1_CENTRAL_CONTROLLER=1
-    #     cmake --build build/ --target all -j4 --verbose
-    # - name: SelfTest
-    #   run: |
-    #     ./build/zerotier-selftest
     - name: Get branch name and sanitize
       id: branch
       run: |
@@ -64,15 +39,10 @@ jobs:
         calculatedSha=$(git rev-parse --short ${{ github.sha }})
         echo "COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
 
-    - name: Build
+    - name: Build & Push Docker Image
       run: |
-        docker build -t us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-${{ runner.arch }} -f ext/central-controller-docker/Dockerfile.new .
-
-
-    - name: Build and push Docker Image
-      run: |    
-        docker push us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-${{ runner.arch }}
-    
+        docker build -t us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-${{ runner.arch }} -f ext/central-controller-docker/Dockerfile.new . --push
+            
   multi-arch-docker:
     runs-on: gha-runner-x64
     needs: central_controller
