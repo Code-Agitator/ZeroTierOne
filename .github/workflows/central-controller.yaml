@@ -66,8 +66,8 @@ jobs:
 
     - name: Build and push Docker Image
       run: |    
-        docker build -t us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/central-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-${{ runner.arch }} -f ext/central-controller-docker/Dockerfile.conda .
-        docker push us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/central-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-${{ runner.arch }}
+        docker build -t us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-${{ runner.arch }} -f ext/central-controller-docker/Dockerfile.conda .
+        docker push us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-${{ runner.arch }}
     
   multi-arch-docker:
     runs-on: gha-runner-x64
@@ -75,7 +75,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: GCP Auth
       uses: google-github-actions/auth@v2
       with:
@@ -102,7 +102,7 @@ jobs:
 
     - name: Create and push multi-arch manifest
       run: |
-        docker manifest create us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/central-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }} \
-          --amend us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/central-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-X64 \
-          --amend us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/central-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-ARM64
-        docker manifest push us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/central-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}
+        docker manifest create us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }} \
+          --amend us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-X64 \
+          --amend us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-ARM64
+        docker manifest push us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}
