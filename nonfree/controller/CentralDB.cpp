@@ -1130,7 +1130,8 @@ void CentralDB::commitThread()
 					}
 
 					pqxx::row mrow = w.exec_params1(
-						"SELECT COUNT(id) FROM ztc_member WHERE id = $1 AND network_id = $2", memberId, networkId);
+						"SELECT COUNT(id) FROM network_memberships_ctl WHERE device_id = $1 AND network_id = $2",
+						memberId, networkId);
 					int membercount = mrow[0].as<int>();
 
 					bool isNewMember = (membercount == 0);
