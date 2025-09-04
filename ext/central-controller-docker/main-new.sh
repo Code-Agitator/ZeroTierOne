@@ -121,7 +121,7 @@ echo "{
     },
     \"controller\": {
         \"listenMode\": \"${ZT_LISTEN_MODE:-pgsql}\",
-        \"statusMode\": \"`${ZT_STATUS_MODE:-pgsql}\"
+        \"statusMode\": \"${ZT_STATUS_MODE:-pgsql}\"
         ${REDIS}
         ${BIGTABLE_CONF}
         ${PUBSUB_CONF}
