@@ -28,7 +28,16 @@ namespace {
 
 using namespace ZeroTier;
 
-CV2::CV2(const Identity& myId, const char* path, int listenPort) : DB(), _pool(), _myId(myId), _myAddress(myId.address()), _ready(0), _connected(1), _run(1), _waitNoticePrinted(false), _listenPort(listenPort)
+CV2::CV2(const Identity& myId, const char* path, int listenPort)
+	: DB()
+	, _pool()
+	, _myId(myId)
+	, _myAddress(myId.address())
+	, _ready(0)
+	, _connected(1)
+	, _run(1)
+	, _waitNoticePrinted(false)
+	, _listenPort(listenPort)
 {
 	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 	auto tracer = provider->GetTracer("cv2");
@@ -44,7 +53,8 @@ CV2::CV2(const Identity& myId, const char* path, int listenPort) : DB(), _pool()
 	_connString = std::string(path);
 
 	auto f = std::make_shared<PostgresConnFactory>(_connString);
-	_pool = std::make_shared<ConnectionPool<PostgresConnection> >(15, 5, std::static_pointer_cast<ConnectionFactory>(f));
+	_pool =
+		std::make_shared<ConnectionPool<PostgresConnection> >(15, 5, std::static_pointer_cast<ConnectionFactory>(f));
 
 	memset(_ssoPsk, 0, sizeof(_ssoPsk));
 	char* const ssoPskHex = getenv("ZT_SSO_PSK");
@@ -60,7 +70,9 @@ CV2::CV2(const Identity& myId, const char* path, int listenPort) : DB(), _pool()
 
 	_readyLock.lock();
 
-	fprintf(stderr, "[%s] NOTICE: %.10llx controller PostgreSQL waiting for initial data download..." ZT_EOL_S, ::_timestr(), (unsigned long long)_myAddress.toInt());
+	fprintf(
+		stderr, "[%s] NOTICE: %.10llx controller PostgreSQL waiting for initial data download..." ZT_EOL_S,
+		::_timestr(), (unsigned long long)_myAddress.toInt());
 	_waitNoticePrinted = true;
 
 	initializeNetworks();
@@ -229,7 +241,11 @@ void CV2::eraseMember(const uint64_t networkId, const uint64_t memberId)
 	//_memberChanged(tmp.first, nullJson, isReady());
 }
 
-void CV2::nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress& physicalAddress, const char* osArch)
+void CV2::nodeIsOnline(
+	const uint64_t networkId,
+	const uint64_t memberId,
+	const InetAddress& physicalAddress,
+	const char* osArch)
 {
 	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 	auto tracer = provider->GetTracer("cv2");
@@ -295,21 +311,21 @@ AuthInfo CV2::getSSOAuthInfo(const nlohmann::json& member, const std::string& re
 		// 		std::string nonce = "";
 
 		// 		// check if the member exists first.
-		// 		pqxx::row count = w.exec_params1("SELECT count(id) FROM ztc_member WHERE id = $1 AND network_id = $2 AND deleted = false", memberId, networkId);
-		// 		if (count[0].as<int>() == 1) {
+		// 		pqxx::row count = w.exec_params1("SELECT count(id) FROM ztc_member WHERE id = $1 AND network_id = $2 AND
+		// deleted = false", memberId, networkId); 		if (count[0].as<int>() == 1) {
 		// 			// get active nonce, if exists.
 		// 			pqxx::result r = w.exec_params("SELECT nonce FROM ztc_sso_expiry "
 		// 				"WHERE network_id = $1 AND member_id = $2 "
-		// 				"AND ((NOW() AT TIME ZONE 'UTC') <= authentication_expiry_time) AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
-		// 				networkId, memberId);
+		// 				"AND ((NOW() AT TIME ZONE 'UTC') <= authentication_expiry_time) AND ((NOW() AT TIME ZONE 'UTC')
+		// <= nonce_expiration)", 				networkId, memberId);
 
 		// 			if (r.size() == 0) {
 		// 				// no active nonce.
 		// 				// find an unused nonce, if one exists.
 		// 				pqxx::result r = w.exec_params("SELECT nonce FROM ztc_sso_expiry "
 		// 					"WHERE network_id = $1 AND member_id = $2 "
-		// 					"AND authentication_expiry_time IS NULL AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
-		// 					networkId, memberId);
+		// 					"AND authentication_expiry_time IS NULL AND ((NOW() AT TIME ZONE 'UTC') <=
+		// nonce_expiration)", 					networkId, memberId);
 
 		// 				if (r.size() == 1) {
 		// 					// we have an existing nonce.  Use it
@@ -366,15 +382,14 @@ AuthInfo CV2::getSSOAuthInfo(const nlohmann::json& member, const std::string& re
 		// 				provider = r.at(0)[3].as<std::optional<std::string>>().value_or("");
 		// 				sso_version = r.at(0)[4].as<std::optional<uint64_t>>().value_or(1);
 		// 			} else if (r.size() > 1) {
-		// 				fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n", networkId.c_str());
-		// 			} else {
-		// 				fprintf(stderr, "No client or auth endpoint?!?\n");
+		// 				fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n",
+		// networkId.c_str()); 			} else { 				fprintf(stderr, "No client or auth endpoint?!?\n");
 		// 			}
 
 		// 			info.version = sso_version;
 
-		// 			// no catch all else because we don't actually care if no records exist here. just continue as normal.
-		// 			if ((!client_id.empty())&&(!authorization_endpoint.empty())) {
+		// 			// no catch all else because we don't actually care if no records exist here. just continue as
+		// normal. 			if ((!client_id.empty())&&(!authorization_endpoint.empty())) {
 
 		// 				uint8_t state[48];
 		// 				HMACSHA384(_ssoPsk, nonceBytes, sizeof(nonceBytes), state);
@@ -401,17 +416,16 @@ AuthInfo CV2::getSSOAuthInfo(const nlohmann::json& member, const std::string& re
 		// #ifdef ZT_DEBUG
 		// 					fprintf(
 		// 						stderr,
-		// 						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s\nprovider: %s\n",
-		// 						info.ssoClientID.c_str(),
-		// 						info.issuerURL.c_str(),
-		// 						info.ssoNonce.c_str(),
+		// 						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL:
+		// %s\nprovider: %s\n", 						info.ssoClientID.c_str(), 						info.issuerURL.c_str(), 						info.ssoNonce.c_str(),
 		// 						info.ssoState.c_str(),
 		// 						info.centralAuthURL.c_str(),
 		// 						provider.c_str());
 		// #endif
 		// 				}
 		// 			}  else {
-		// 				fprintf(stderr, "client_id: %s\nauthorization_endpoint: %s\n", client_id.c_str(), authorization_endpoint.c_str());
+		// 				fprintf(stderr, "client_id: %s\nauthorization_endpoint: %s\n", client_id.c_str(),
+		// authorization_endpoint.c_str());
 		// 			}
 		// 		}
 
@@ -485,12 +499,16 @@ void CV2::initializeNetworks()
 			config["lastModified"] = last_modified.value_or(0);
 			config["revision"] = revision.value_or(0);
 			config["capabilities"] = cfgtmp["capabilities"].is_array() ? cfgtmp["capabilities"] : json::array();
-			config["enableBroadcast"] = cfgtmp["enableBroadcast"].is_boolean() ? cfgtmp["enableBroadcast"].get<bool>() : false;
+			config["enableBroadcast"] =
+				cfgtmp["enableBroadcast"].is_boolean() ? cfgtmp["enableBroadcast"].get<bool>() : false;
 			config["mtu"] = cfgtmp["mtu"].is_number() ? cfgtmp["mtu"].get<int32_t>() : 2800;
-			config["multicastLimit"] = cfgtmp["multicastLimit"].is_number() ? cfgtmp["multicastLimit"].get<int32_t>() : 64;
+			config["multicastLimit"] =
+				cfgtmp["multicastLimit"].is_number() ? cfgtmp["multicastLimit"].get<int32_t>() : 64;
 			config["private"] = cfgtmp["private"].is_boolean() ? cfgtmp["private"].get<bool>() : true;
-			config["remoteTraceLevel"] = cfgtmp["remoteTraceLevel"].is_number() ? cfgtmp["remoteTraceLevel"].get<int32_t>() : 0;
-			config["remoteTraceTarget"] = cfgtmp["remoteTraceTarget"].is_string() ? cfgtmp["remoteTraceTarget"].get<std::string>() : "";
+			config["remoteTraceLevel"] =
+				cfgtmp["remoteTraceLevel"].is_number() ? cfgtmp["remoteTraceLevel"].get<int32_t>() : 0;
+			config["remoteTraceTarget"] =
+				cfgtmp["remoteTraceTarget"].is_string() ? cfgtmp["remoteTraceTarget"].get<std::string>() : "";
 			config["revision"] = revision.value_or(0);
 			config["rules"] = cfgtmp["rules"].is_array() ? cfgtmp["rules"] : json::array();
 			config["tags"] = cfgtmp["tags"].is_array() ? cfgtmp["tags"] : json::array();
@@ -514,7 +532,9 @@ void CV2::initializeNetworks()
 			config["objtype"] = "network";
 			config["routes"] = cfgtmp["routes"].is_array() ? cfgtmp["routes"] : json::array();
 			config["clientId"] = cfgtmp["clientId"].is_string() ? cfgtmp["clientId"].get<std::string>() : "";
-			config["authorizationEndpoint"] = cfgtmp["authorizationEndpoint"].is_string() ? cfgtmp["authorizationEndpoint"].get<std::string>() : nullptr;
+			config["authorizationEndpoint"] = cfgtmp["authorizationEndpoint"].is_string()
+												  ? cfgtmp["authorizationEndpoint"].get<std::string>()
+												  : nullptr;
 			config["provider"] = cfgtmp["ssoProvider"].is_string() ? cfgtmp["ssoProvider"].get<std::string>() : "";
 			if (! cfgtmp["dns"].is_object()) {
 				cfgtmp["dns"] = json::object();
@@ -524,7 +544,8 @@ void CV2::initializeNetworks()
 			else {
 				config["dns"] = cfgtmp["dns"];
 			}
-			config["ipAssignmentPools"] = cfgtmp["ipAssignmentPools"].is_array() ? cfgtmp["ipAssignmentPools"] : json::array();
+			config["ipAssignmentPools"] =
+				cfgtmp["ipAssignmentPools"].is_array() ? cfgtmp["ipAssignmentPools"] : json::array();
 
 			Metrics::network_count++;
 
@@ -546,7 +567,9 @@ void CV2::initializeNetworks()
 
 		if (++this->_ready == 2) {
 			if (_waitNoticePrinted) {
-				fprintf(stderr, "[%s] NOTICE: %.10llx controller PostgreSQL data download complete." ZT_EOL_S, _timestr(), (unsigned long long)_myAddress.toInt());
+				fprintf(
+					stderr, "[%s] NOTICE: %.10llx controller PostgreSQL data download complete." ZT_EOL_S, _timestr(),
+					(unsigned long long)_myAddress.toInt());
 			}
 			_readyLock.unlock();
 		}
@@ -573,7 +596,8 @@ void CV2::initializeMembers()
 		char qbuf[2048];
 		sprintf(
 			qbuf,
-			"SELECT nm.device_id, nm.network_id, nm.authorized, nm.active_bridge, nm.ip_assignments, nm.no_auto_assign_ips, "
+			"SELECT nm.device_id, nm.network_id, nm.authorized, nm.active_bridge, nm.ip_assignments, "
+			"nm.no_auto_assign_ips, "
 			"nm.sso_exempt, (EXTRACT(EPOCH FROM nm.authentication_expiry_time AT TIME ZONE 'UTC')*1000)::bigint, "
 			"(EXTRACT(EPOCH FROM nm.creation_time AT TIME ZONE 'UTC')*1000)::bigint, nm.identity, "
 			"(EXTRACT(EPOCH FROM nm.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
@@ -705,7 +729,9 @@ void CV2::initializeMembers()
 
 		if (++this->_ready == 2) {
 			if (_waitNoticePrinted) {
-				fprintf(stderr, "[%s] NOTICE: %.10llx controller PostgreSQL data download complete." ZT_EOL_S, _timestr(), (unsigned long long)_myAddress.toInt());
+				fprintf(
+					stderr, "[%s] NOTICE: %.10llx controller PostgreSQL data download complete." ZT_EOL_S, _timestr(),
+					(unsigned long long)_myAddress.toInt());
 			}
 			_readyLock.unlock();
 		}
@@ -759,13 +785,10 @@ void CV2::heartbeat()
 				w.exec_params0(
 					"INSERT INTO controllers_ctl (id, hostname, last_heartbeat, public_identity, version) VALUES "
 					"($1, $2, TO_TIMESTAMP($3::double precision/1000), $4, $5) "
-					"ON CONFLICT (id) DO UPDATE SET hostname = EXCLUDED.hostname, last_heartbeat = EXCLUDED.last_heartbeat, "
+					"ON CONFLICT (id) DO UPDATE SET hostname = EXCLUDED.hostname, last_heartbeat = "
+					"EXCLUDED.last_heartbeat, "
 					"public_identity = EXCLUDED.public_identity, version = EXCLUDED.version",
-					controllerId,
-					hostname,
-					ts,
-					publicIdentity,
-					versionStr);
+					controllerId, hostname, ts, publicIdentity, versionStr);
 				w.commit();
 			}
 			catch (std::exception& e) {
@@ -876,7 +899,7 @@ void CV2::commitThread()
 						target = config["remoteTraceTarget"];
 					}
 
-					pqxx::row nwrow = w.exec_params1("SELECT COUNT(id) FROM networks WHERE id = $1", networkId);
+					pqxx::row nwrow = w.exec_params1("SELECT COUNT(id) FROM networks_ctl WHERE id = $1", networkId);
 					int nwcount = nwrow[0].as<int>();
 
 					if (nwcount != 1) {
@@ -887,12 +910,13 @@ void CV2::commitThread()
 					}
 
 					// only needed for hooks, and no hooks for now
-					// pqxx::row mrow = w.exec_params1("SELECT COUNT(id) FROM device_networks WHERE device_id = $1 AND network_id = $2", memberId, networkId);
-					// int membercount = mrow[0].as<int>();
-					// bool isNewMember = (membercount == 0);
+					// pqxx::row mrow = w.exec_params1("SELECT COUNT(id) FROM device_networks WHERE device_id = $1 AND
+					// network_id = $2", memberId, networkId); int membercount = mrow[0].as<int>(); bool isNewMember =
+					// (membercount == 0);
 
 					pqxx::result res = w.exec_params0(
-						"INSERT INTO network_memberships_ctl (device_id, network_id, authorized, active_bridge, ip_assignments, "
+						"INSERT INTO network_memberships_ctl (device_id, network_id, authorized, active_bridge, "
+						"ip_assignments, "
 						"no_auto_assign_ips, sso_exempt, authentication_expiry_time, capabilities, creation_time, "
 						"identity, last_authorized_time, last_deauthorized_time, "
 						"remote_trace_level, remote_trace_target, revision, tags, version_major, version_minor, "
@@ -903,35 +927,24 @@ void CV2::commitThread()
 						"ON CONFLICT (device_id, network_id) DO UPDATE SET "
 						"authorized = EXCLUDED.authorized, active_bridge = EXCLUDED.active_bridge, "
 						"ip_assignments = EXCLUDED.ip_assignments, no_auto_assign_ips = EXCLUDED.no_auto_assign_ips, "
-						"sso_exempt = EXCLUDED.sso_exempt, authentication_expiry_time = EXCLUDED.authentication_expiry_time, "
+						"sso_exempt = EXCLUDED.sso_exempt, authentication_expiry_time = "
+						"EXCLUDED.authentication_expiry_time, "
 						"capabilities = EXCLUDED.capabilities, creation_time = EXCLUDED.creation_time, "
 						"identity = EXCLUDED.identity, last_authorized_time = EXCLUDED.last_authorized_time, "
 						"last_deauthorized_time = EXCLUDED.last_deauthorized_time, "
-						"remote_trace_level = EXCLUDED.remote_trace_level, remote_trace_target = EXCLUDED.remote_trace_target, "
+						"remote_trace_level = EXCLUDED.remote_trace_level, remote_trace_target = "
+						"EXCLUDED.remote_trace_target, "
 						"revision = EXCLUDED.revision, tags = EXCLUDED.tags, version_major = EXCLUDED.version_major, "
 						"version_minor = EXCLUDED.version_minor, version_revision = EXCLUDED.version_revision, "
 						"version_protocol = EXCLUDED.version_protocol",
-						memberId,
-						networkId,
-						(bool)config["authorized"],
-						(bool)config["activeBridge"],
-						config["ipAssignments"].get<std::vector<std::string> >(),
-						(bool)config["noAutoAssignIps"],
-						(bool)config["ssoExempt"],
-						(uint64_t)config["authenticationExpiryTime"],
-						OSUtils::jsonDump(config["capabilities"], -1),
-						(uint64_t)config["creationTime"],
-						OSUtils::jsonString(config["identity"], ""),
-						(uint64_t)config["lastAuthorizedTime"],
-						(uint64_t)config["lastDeauthorizedTime"],
-						(int)config["remoteTraceLevel"],
-						target,
-						(uint64_t)config["revision"],
-						OSUtils::jsonDump(config["tags"], -1),
-						(int)config["vMajor"],
-						(int)config["vMinor"],
-						(int)config["vRev"],
-						(int)config["vProto"]);
+						memberId, networkId, (bool)config["authorized"], (bool)config["activeBridge"],
+						config["ipAssignments"].get<std::vector<std::string> >(), (bool)config["noAutoAssignIps"],
+						(bool)config["ssoExempt"], (uint64_t)config["authenticationExpiryTime"],
+						OSUtils::jsonDump(config["capabilities"], -1), (uint64_t)config["creationTime"],
+						OSUtils::jsonString(config["identity"], ""), (uint64_t)config["lastAuthorizedTime"],
+						(uint64_t)config["lastDeauthorizedTime"], (int)config["remoteTraceLevel"], target,
+						(uint64_t)config["revision"], OSUtils::jsonDump(config["tags"], -1), (int)config["vMajor"],
+						(int)config["vMinor"], (int)config["vRev"], (int)config["vProto"]);
 
 					w.commit();
 
@@ -967,7 +980,9 @@ void CV2::commitThread()
 						_memberChanged(memOrig, memNew, qitem.second);
 					}
 					else {
-						fprintf(stderr, "%s: Can't notify of change.  Error parsing nwid or memberid: %llu-%llu\n", _myAddressStr.c_str(), (unsigned long long)nwidInt, (unsigned long long)memberidInt);
+						fprintf(
+							stderr, "%s: Can't notify of change.  Error parsing nwid or memberid: %llu-%llu\n",
+							_myAddressStr.c_str(), (unsigned long long)nwidInt, (unsigned long long)memberidInt);
 					}
 				}
 				catch (pqxx::data_exception& e) {
@@ -985,7 +1000,9 @@ void CV2::commitThread()
 				}
 				catch (std::exception& e) {
 					std::string cfgDump = OSUtils::jsonDump(config, 2);
-					fprintf(stderr, "%s ERROR: Error updating member %s-%s: %s\njsonDump: %s\n", _myAddressStr.c_str(), networkId.c_str(), memberId.c_str(), e.what(), cfgDump.c_str());
+					fprintf(
+						stderr, "%s ERROR: Error updating member %s-%s: %s\njsonDump: %s\n", _myAddressStr.c_str(),
+						networkId.c_str(), memberId.c_str(), e.what(), cfgDump.c_str());
 					mspan->SetStatus(opentelemetry::trace::StatusCode::kError, "std::exception");
 					mspan->SetAttribute("error", e.what());
 					mspan->SetAttribute("config", cfgDump);
@@ -1007,10 +1024,7 @@ void CV2::commitThread()
 						"VALUES ($1, $2, $3, $4, $5) "
 						"ON CONFLICT (id) DO UPDATE SET "
 						"name = EXCLUDED.name, configuration = EXCLUDED.configuration, revision = EXCLUDED.revision+1",
-						id,
-						OSUtils::jsonString(config["name"], ""),
-						OSUtils::jsonDump(config, -1),
-						_myAddressStr,
+						id, OSUtils::jsonString(config["name"], ""), OSUtils::jsonDump(config, -1), _myAddressStr,
 						((uint64_t)config["revision"]));
 
 					w.commit();
@@ -1025,7 +1039,9 @@ void CV2::commitThread()
 						_networkChanged(nwOrig, nwNew, qitem.second);
 					}
 					else {
-						fprintf(stderr, "%s: Can't notify network changed: %llu\n", _myAddressStr.c_str(), (unsigned long long)nwidInt);
+						fprintf(
+							stderr, "%s: Can't notify network changed: %llu\n", _myAddressStr.c_str(),
+							(unsigned long long)nwidInt);
 					}
 				}
 				catch (pqxx::data_exception& e) {
@@ -1083,7 +1099,9 @@ void CV2::commitThread()
 					std::string memberId = config["id"];
 					std::string networkId = config["nwid"];
 
-					pqxx::result res = w.exec_params0("DELETE FROM network_memberships_ctl WHERE device_id = $1 AND network_id = $2", memberId, networkId);
+					pqxx::result res = w.exec_params0(
+						"DELETE FROM network_memberships_ctl WHERE device_id = $1 AND network_id = $2", memberId,
+						networkId);
 
 					w.commit();
 
@@ -1173,7 +1191,10 @@ void CV2::onlineNotificationThread()
 				std::string memberId(memTmp);
 
 				try {
-					pqxx::row r = w2.exec_params1("SELECT device_id, network_id FROM network_memberships_ctl WHERE network_id = $1 AND device_id = $2", networkId, memberId);
+					pqxx::row r = w2.exec_params1(
+						"SELECT device_id, network_id FROM network_memberships_ctl WHERE network_id = $1 AND device_id "
+						"= $2",
+						networkId, memberId);
 				}
 				catch (pqxx::unexpected_rows& e) {
 					continue;
@@ -1195,15 +1216,16 @@ void CV2::onlineNotificationThread()
 					{ ipAddr, ts },
 				};
 
-				std::string device_network_insert = "INSERT INTO network_memberships_ctl (device_id, network_id, last_seen, os, arch) "
-													"VALUES ('"
-													+ w2.esc(memberId) + "', '" + w2.esc(networkId) + "', '" + w2.esc(record.dump())
-													+ "'::JSONB, "
-													  "'"
-													+ w2.esc(os) + "', '" + w2.esc(arch)
-													+ "') "
-													  "ON CONFLICT (device_id, network_id) DO UPDATE SET os = EXCLUDED.os, arch = EXCLUDED.arch, "
-													  "last_seen = network_memberships_ctl.last_seen || EXCLUDED.last_seen";
+				std::string device_network_insert =
+					"INSERT INTO network_memberships_ctl (device_id, network_id, last_seen, os, arch) "
+					"VALUES ('"
+					+ w2.esc(memberId) + "', '" + w2.esc(networkId) + "', '" + w2.esc(record.dump())
+					+ "'::JSONB, "
+					  "'"
+					+ w2.esc(os) + "', '" + w2.esc(arch)
+					+ "') "
+					  "ON CONFLICT (device_id, network_id) DO UPDATE SET os = EXCLUDED.os, arch = EXCLUDED.arch, "
+					  "last_seen = network_memberships_ctl.last_seen || EXCLUDED.last_seen";
 				pipe.insert(device_network_insert);
 
 				Metrics::pgsql_node_checkin++;
@@ -1233,7 +1255,9 @@ void CV2::onlineNotificationThread()
 
 	fprintf(stderr, "%s: Fell out of run loop in onlineNotificationThread\n", _myAddressStr.c_str());
 	if (_run == 1) {
-		fprintf(stderr, "ERROR: %s onlineNotificationThread should still be running! Exiting Controller.\n", _myAddressStr.c_str());
+		fprintf(
+			stderr, "ERROR: %s onlineNotificationThread should still be running! Exiting Controller.\n",
+			_myAddressStr.c_str());
 		exit(6);
 	}
 }

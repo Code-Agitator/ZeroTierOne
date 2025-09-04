@@ -1119,7 +1119,7 @@ void CentralDB::commitThread()
 						target = config["remoteTraceTarget"];
 					}
 
-					pqxx::row nwrow = w.exec_params1("SELECT COUNT(id) FROM ztc_network WHERE id = $1", networkId);
+					pqxx::row nwrow = w.exec_params1("SELECT COUNT(id) FROM networks_ctl WHERE id = $1", networkId);
 					int nwcount = nwrow[0].as<int>();
 
 					if (nwcount != 1) {
