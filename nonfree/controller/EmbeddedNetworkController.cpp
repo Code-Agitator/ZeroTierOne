@@ -655,7 +655,7 @@ void EmbeddedNetworkController::init(const Identity& signingId, Sender* sender)
 		throw std::runtime_error("central controller requires postgres db");
 	}
 
-	const char* connString = _path.substr(9).c_str();
+	std::string connString = _path.substr(9);
 
 	CentralDB::ListenerMode lm;
 	if (_cc->listenMode == "pgsql") {
@@ -685,7 +685,7 @@ void EmbeddedNetworkController::init(const Identity& signingId, Sender* sender)
 		throw std::runtime_error("unsupported status mode");
 	}
 
-	_db.addDB(std::shared_ptr<CentralDB>(new CentralDB(_signingId, connString, _listenPort, lm, sm, _cc)));
+	_db.addDB(std::shared_ptr<CentralDB>(new CentralDB(_signingId, connString.c_str(), _listenPort, lm, sm, _cc)));
 #else
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	if ((_path.length() > 9) && (_path.substr(0, 9) == "postgres:")) {

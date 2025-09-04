@@ -42,12 +42,6 @@
 
 using json = nlohmann::json;
 
-namespace {
-
-static const int DB_MINIMUM_VERSION = 38;
-
-}	// anonymous namespace
-
 using namespace ZeroTier;
 
 using Attrs = std::vector<std::pair<std::string, std::string> >;
@@ -88,7 +82,7 @@ CentralDB::CentralDB(
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
 	_connString = std::string(connString);
-	fprintf(stderr, "connstring: %s\n", _connString.c_str());
+
 	auto f = std::make_shared<PostgresConnFactory>(_connString);
 	_pool =
 		std::make_shared<ConnectionPool<PostgresConnection> >(15, 5, std::static_pointer_cast<ConnectionFactory>(f));
@@ -109,23 +103,6 @@ CentralDB::CentralDB(
 		_redisMemberStatus = true;
 		fprintf(stderr, "Using redis for member status\n");
 	}
-
-	auto c = _pool->borrow();
-	pqxx::work txn { *c->c };
-
-	pqxx::row r { txn.exec1("SELECT version FROM ztc_database") };
-	int dbVersion = r[0].as<int>();
-	txn.commit();
-
-	if (dbVersion < DB_MINIMUM_VERSION) {
-		fprintf(
-			stderr,
-			"Central database schema version too low.  This controller version requires a minimum schema version of "
-			"%d. Please upgrade your Central instance",
-			DB_MINIMUM_VERSION);
-		exit(1);
-	}
-	_pool->unborrow(c);
 
 	if ((listenMode == LISTENER_MODE_REDIS || statusMode == STATUS_WRITER_MODE_REDIS) && _cc->redisConfig != NULL) {
 		auto innerspan = tracer->StartSpan("CentralDB::CentralDB::configureRedis");

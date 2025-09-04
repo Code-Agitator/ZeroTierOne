@@ -164,10 +164,4 @@ fi
 export GLIBCXX_FORCE_NEW=1
 export GLIBCPP_FORCE_NEW=1
 export LD_PRELOAD="/opt/conda/envs/central_controller/lib/libjemalloc.so.2"
-#exec 
-/usr/local/bin/zerotier-one -p${ZT_CONTROLLER_PORT:-$DEFAULT_PORT} /var/lib/zerotier-one
-if [ $? -ne 0 ]; then
-    echo '*** FAILED: zerotier-one exited unexpectedly'
-    cat /var/lib/zerotier-one/local.conf
-    exit 1
-fi
+exec /usr/local/bin/zerotier-one -p${ZT_CONTROLLER_PORT:-$DEFAULT_PORT} /var/lib/zerotier-one
