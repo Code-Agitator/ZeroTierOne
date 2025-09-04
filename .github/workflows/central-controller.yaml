@@ -14,6 +14,13 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v4
+
+    - name: Set up GCloud CLI
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Docker Auth
+      run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+      
     # - name: Setup Miniconda
     #   uses: conda-incubator/setup-miniconda@v3
     #   with:
@@ -60,11 +67,7 @@ jobs:
       with:
         credentials_json: ${{ secrets.DOCKER_REGISTRY_WRITER}}
 
-    - name: Set up GCloud CLI
-      uses: google-github-actions/setup-gcloud@v2
-
-    - name: Docker Auth
-      run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+    
 
     - name: Build and push Docker Image
       run: |    
