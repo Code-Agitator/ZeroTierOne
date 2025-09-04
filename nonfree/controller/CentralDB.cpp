@@ -1170,11 +1170,11 @@ void CentralDB::commitThread()
 
 					w.commit();
 
-					if (! isNewMember) {
-						pqxx::result res = w.exec_params0(
-							"DELETE FROM ztc_member_ip_assignment WHERE member_id = $1 AND network_id = $2", memberId,
-							networkId);
-					}
+					// if (! isNewMember) {
+					// 	pqxx::result res = w.exec_params0(
+					// 		"DELETE FROM ztc_member_ip_assignment WHERE member_id = $1 AND network_id = $2", memberId,
+					// 		networkId);
+					// }
 
 					if (_smee != NULL && isNewMember) {
 						// TODO: Smee Notifications for New Members
@@ -1448,8 +1448,9 @@ void CentralDB::onlineNotificationThread()
 				std::string memberId(memTmp);
 
 				try {
-					pqxx::row r = w.exec_params1(
-						"SELECT id, network_id FROM ztc_member WHERE network_id = $1 AND id = $2", networkId, memberId);
+					"SELECT device_id, network_id FROM network_memberships_ctl WHERE network_id = $1 AND device_id "
+						"= $2",
+						networkId, memberId);
 				}
 				catch (pqxx::unexpected_rows& e) {
 					continue;
