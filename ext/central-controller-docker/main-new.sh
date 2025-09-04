@@ -1,5 +1,6 @@
 #!/bin/bash
 
+conda init
 conda activate central_controller
 
 if [ -z "$ZT_DB_HOST" ]; then
