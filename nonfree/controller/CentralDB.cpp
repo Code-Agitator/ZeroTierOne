@@ -1130,7 +1130,7 @@ void CentralDB::commitThread()
 					}
 
 					pqxx::row mrow = w.exec_params1(
-						"SELECT COUNT(id) FROM network_memberships_ctl WHERE device_id = $1 AND network_id = $2",
+						"SELECT COUNT(device_id) FROM network_memberships_ctl WHERE device_id = $1 AND network_id = $2",
 						memberId, networkId);
 					int membercount = mrow[0].as<int>();
 
@@ -1169,12 +1169,6 @@ void CentralDB::commitThread()
 						(int)config["vMinor"], (int)config["vRev"], (int)config["vProto"]);
 
 					w.commit();
-
-					// if (! isNewMember) {
-					// 	pqxx::result res = w.exec_params0(
-					// 		"DELETE FROM ztc_member_ip_assignment WHERE member_id = $1 AND network_id = $2", memberId,
-					// 		networkId);
-					// }
 
 					if (_smee != NULL && isNewMember) {
 						// TODO: Smee Notifications for New Members
