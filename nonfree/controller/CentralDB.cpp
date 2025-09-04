@@ -88,6 +88,7 @@ CentralDB::CentralDB(
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
 	_connString = std::string(connString);
+	fprintf(stderr, "connstring: %s\n", _connString.c_str());
 	auto f = std::make_shared<PostgresConnFactory>(_connString);
 	_pool =
 		std::make_shared<ConnectionPool<PostgresConnection> >(15, 5, std::static_pointer_cast<ConnectionFactory>(f));
