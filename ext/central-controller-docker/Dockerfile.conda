@@ -22,4 +22,4 @@ RUN echo "/opt/conda/envs/central_controller/lib" > /etc/ld.so.conf.d/conda-cent
 ADD ext/central-controller-docker/main-new.sh /main.sh
 RUN chmod a+x /main.sh
 
-ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "central_controller", "/main.sh"]
+ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "central_controller", "/bin/bash", "-c", "/main.sh"]
