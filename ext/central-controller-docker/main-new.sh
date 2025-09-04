@@ -49,7 +49,7 @@ if [ "$ZT_USE_REDIS" == "true" ]; then
         }
     "
 else
-    REDIS="\"redis\": null"
+    REDIS=", \"redis\": null"
 fi
 
 mkdir -p /var/lib/zerotier-one
