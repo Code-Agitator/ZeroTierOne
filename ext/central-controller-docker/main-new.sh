@@ -1,7 +1,7 @@
 #!/bin/bash
 
-conda init
-conda activate central_controller
+# conda init
+# conda activate central_controller
 
 if [ -z "$ZT_DB_HOST" ]; then
     echo '*** FAILED: ZT_DB_HOST environment variable not defined'
@@ -133,12 +133,12 @@ if [ -n "$DB_SERVER_CA" ]; then
     echo "secret list"
     chmod 600 /secrets/db/*.pem
     ls -l /secrets/db/
-    until /opt/conda/envs/central_controller/bin/pg_isready -h ${ZT_DB_HOST} -p ${ZT_DB_PORT} -d "sslmode=prefer sslcert=${DB_CLIENT_CERT} sslkey=${DB_CLIENT_KEY} sslrootcert=${DB_SERVER_CA}"; do
+    until pg_isready -h ${ZT_DB_HOST} -p ${ZT_DB_PORT} -d "sslmode=prefer sslcert=${DB_CLIENT_CERT} sslkey=${DB_CLIENT_KEY} sslrootcert=${DB_SERVER_CA}"; do
 	    echo "Waiting for PostgreSQL...";
 	    sleep 2;
     done
 else
-    until /opt/conda/envs/central_controller/bin/pg_isready -h ${ZT_DB_HOST} -p ${ZT_DB_PORT}; do
+    until pg_isready -h ${ZT_DB_HOST} -p ${ZT_DB_PORT}; do
 	    echo "Waiting for PostgreSQL...";
 	    sleep 2;
     done
