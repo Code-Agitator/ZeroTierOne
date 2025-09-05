@@ -615,7 +615,7 @@ void CentralDB::initializeNetworks()
 		sprintf(
 			qbuf,
 			"SELECT id, name, configuration , (EXTRACT(EPOCH FROM creation_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"(EXTRACT(EPOCH FROM last_modified AT TIME ZONE 'UTC')*1000)::bigint, revision "
+			"(EXTRACT(EPOCH FROM last_modified AT TIME ZONE 'UTC')*1000)::bigint, revision, frontend "
 			"FROM networks_ctl WHERE controller_id = '%s'",
 			_myAddressStr.c_str());
 
@@ -636,6 +636,8 @@ void CentralDB::initializeNetworks()
 			std::optional<uint64_t>	  // last_modified
 			,
 			std::optional<uint64_t>	  // revision
+			,
+			std::string	  // frontend
 			>
 			row;
 		uint64_t count = 0;
@@ -708,6 +710,7 @@ void CentralDB::initializeNetworks()
 			}
 			config["ipAssignmentPools"] =
 				cfgtmp["ipAssignmentPools"].is_array() ? cfgtmp["ipAssignmentPools"] : json::array();
+			config["frontend"] = std::get<6>(row);
 
 			Metrics::network_count++;
 
@@ -806,6 +809,7 @@ void CentralDB::initializeMembers()
 			"(EXTRACT(EPOCH FROM nm.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
 			"(EXTRACT(EPOCH FROM nm.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
 			"nm.remote_trace_level, nm.remote_trace_target, nm.revision, nm.capabilities, nm.tags "
+			"nm.frontend "
 			"FROM network_memberships_ctl nm "
 			"INNER JOIN networks_ctl n "
 			"  ON nm.network_id = n.id "
@@ -850,6 +854,8 @@ void CentralDB::initializeMembers()
 			std::optional<std::string>	 // capabilities
 			,
 			std::optional<std::string>	 // tags
+			,
+			std::string	  // frontend
 			>
 			row;
 
@@ -909,6 +915,7 @@ void CentralDB::initializeMembers()
 			config["authenticationExpiryTime"] = authentication_expiry_time.value_or(0);
 			config["tags"] = json::parse(tags.value_or("[]"));
 			config["ipAssignments"] = json::array();
+			config["frontend"] = std::get<17>(row);
 
 			Metrics::member_count++;
 
