@@ -1442,6 +1442,10 @@ void CentralDB::onlineNotificationThread()
 				std::string memberId(memTmp);
 
 				try {
+					// check if the member exists first.
+					//
+					// exec_params1 will throw pqxx::unexpected_rows if not exactly one row is returned.  If that's the
+					// case, skip this record and move on.
 					pqxx::row r = w.exec_params1(
 						"SELECT device_id, network_id FROM network_memberships_ctl WHERE network_id = $1 AND device_id "
 						"= $2",

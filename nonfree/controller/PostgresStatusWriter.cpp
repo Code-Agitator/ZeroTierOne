@@ -57,20 +57,6 @@ void PostgresStatusWriter::writePending()
 				{ entry.address.toIpString(iptmp), entry.last_seen },
 			};
 
-			try {
-				// check if the member exists first.
-				//
-				// exec_params1 will throw pqxx::unexpected_rows if not exactly one row is returned.  If that's the
-				// case, skip this record and move on.
-				w.exec_params1(
-					"SELECT device_id, network_id FROM network_memberships_ctl WHERE network_id = $1 AND device_id = "
-					"$2",
-					entry.network_id, entry.node_id);
-			}
-			catch (pqxx::unexpected_rows& e) {
-				continue;
-			}
-
 			std::string insert_statement =
 				"INSERT INTO network_memberships_ctl (device_id, network_id, last_seen, os, arch) "
 				"VALUES ('"
