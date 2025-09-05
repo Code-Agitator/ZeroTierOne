@@ -200,7 +200,7 @@ mac-dist-pkg: FORCE
 official: FORCE
 	cd ../DesktopUI ; make ZT_OFFICIAL_RELEASE=1
 	make clean
-	make ZT_OFFICIAL_RELEASE=1 -j 8 one
+	make ZT_OFFICIAL_RELEASE=1 -j 8 one ZT_NONFREE=1
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
 _buildx:

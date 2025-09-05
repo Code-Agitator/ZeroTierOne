@@ -103,7 +103,7 @@ static OneService* volatile zt1Service = (OneService*)0;
 #define COPYRIGHT_NOTICE "Copyright (c) ZeroTier, Inc."
 
 #ifdef ZT_NONFREE_CONTROLLER
-#define LICENSE_GRANT "Licensed under a non-commercial source-available license (nonfree/LICENSE.md)."
+#define LICENSE_GRANT ZT_EOL_S "Licensed under a Source-Available License for Non-Commercial" ZT_EOL_S "Use (nonfree/LICENSE.md). Use of this build for Commercial Use" ZT_EOL_S "requires a paid subscription plan or a commercial license" ZT_EOL_S "agreement with ZeroTier, Inc. Visit https://www.zerotier.com for" ZT_EOL_S "more information."
 #else
 #define LICENSE_GRANT "Licensed under Mozilla Public License v2.0 (LICENSE-MPL.txt)."
 #endif
