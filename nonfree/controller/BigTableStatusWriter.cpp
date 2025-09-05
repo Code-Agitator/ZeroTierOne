@@ -1,10 +1,12 @@
 #include "BigTableStatusWriter.hpp"
 
 #include "ControllerConfig.hpp"
+#include "PubSubWriter.hpp"
 
 #include <google/cloud/bigtable/mutations.h>
 #include <google/cloud/bigtable/row.h>
 #include <google/cloud/bigtable/table.h>
+#include <opentelemetry/trace/provider.h>
 
 namespace cbt = google::cloud::bigtable;
 
@@ -23,10 +25,12 @@ const std::string lastSeenColumn = "last_seen";
 BigTableStatusWriter::BigTableStatusWriter(
 	const std::string& project_id,
 	const std::string& instance_id,
-	const std::string& table_id)
+	const std::string& table_id,
+	std::shared_ptr<PubSubWriter> pubsubWriter)
 	: _project_id(project_id)
 	, _instance_id(instance_id)
 	, _table_id(table_id)
+	, _pubsubWriter(pubsubWriter)
 {
 }
 
@@ -42,13 +46,16 @@ void BigTableStatusWriter::updateNodeStatus(
 	const std::string& arch,
 	const std::string& version,
 	const InetAddress& address,
-	int64_t last_seen)
+	int64_t last_seen,
+	const std::string& frontend)
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("BigTableStatusWriter");
+	auto span = tracer->StartSpan("BigTableStatusWriter::updateNodeStatus");
+	auto scope = tracer->WithActiveSpan(span);
+
 	std::lock_guard<std::mutex> l(_lock);
-	_pending.push_back({ network_id, node_id, os, arch, version, address, last_seen });
-	if (_pending.size() >= 100) {
-		writePending();
-	}
+	_pending.push_back({ network_id, node_id, os, arch, version, address, last_seen, frontend });
 }
 
 size_t BigTableStatusWriter::queueLength() const
@@ -59,6 +66,11 @@ size_t BigTableStatusWriter::queueLength() const
 
 void BigTableStatusWriter::writePending()
 {
+	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+	auto tracer = provider->GetTracer("BigTableStatusWriter");
+	auto span = tracer->StartSpan("BigTableStatusWriter::writePending");
+	auto scope = tracer->WithActiveSpan(span);
+
 	std::vector<PendingStatusEntry> toWrite;
 	{
 		std::lock_guard<std::mutex> l(_lock);
@@ -88,6 +100,10 @@ void BigTableStatusWriter::writePending()
 		int64_t ts = entry.last_seen;
 		m.emplace_back(cbt::SetCell(checkInColumnFamily, lastSeenColumn, std::move(ts)));
 		bulk.push_back(std::move(m));
+
+		// TODO: Check performance on this.  May need to bach these.
+		_pubsubWriter->publishStatusChange(
+			entry.target, entry.network_id, entry.node_id, entry.os, entry.arch, entry.version, entry.last_seen);
 	}
 
 	std::vector<cbt::FailedMutation> failures = table.BulkApply(bulk);

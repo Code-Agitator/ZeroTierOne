@@ -32,10 +32,11 @@ void RedisStatusWriter::updateNodeStatus(
 	const std::string& arch,
 	const std::string& version,
 	const InetAddress& address,
-	int64_t last_seen)
+	int64_t last_seen,
+	const std::string& /* frontend unused */)
 {
 	std::lock_guard<std::mutex> l(_lock);
-	_pending.push_back({ network_id, node_id, os, arch, version, address, last_seen });
+	_pending.push_back({ network_id, node_id, os, arch, version, address, last_seen, "" });
 }
 
 size_t RedisStatusWriter::queueLength() const

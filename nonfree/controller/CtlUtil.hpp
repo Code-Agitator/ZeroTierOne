@@ -15,6 +15,11 @@ const char* _timestr();
 std::vector<std::string> split(std::string str, char delim);
 
 std::string url_encode(const std::string& value);
+
+#ifdef ZT1_CENTRAL_CONTROLLER
+void create_gcp_pubsub_topic_if_needed(std::string project_id, std::string topic_id);
+#endif
+
 }	// namespace ZeroTier
 
 #endif	 // namespace ZeroTier

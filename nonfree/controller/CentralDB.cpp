@@ -24,6 +24,7 @@
 #include "EmbeddedNetworkController.hpp"
 #include "PostgresStatusWriter.hpp"
 #include "PubSubListener.hpp"
+#include "PubSubWriter.hpp"
 #include "Redis.hpp"
 #include "RedisListener.hpp"
 #include "RedisStatusWriter.hpp"
@@ -178,6 +179,7 @@ CentralDB::CentralDB(
 			break;
 	}
 
+	std::shared_ptr<PubSubWriter> pubsubWriter;
 	switch (statusMode) {
 		case STATUS_WRITER_MODE_REDIS:
 			if (_cc->redisConfig != NULL) {
@@ -193,8 +195,21 @@ CentralDB::CentralDB(
 			}
 			break;
 		case STATUS_WRITER_MODE_BIGTABLE:
+			if (cc->bigTableConfig == NULL) {
+				throw std::runtime_error(
+					"CentralDB: BigTable status mode selected but no BigTable configuration provided");
+			}
+			if (cc->pubSubConfig == NULL) {
+				throw std::runtime_error(
+					"CentralDB: BigTable status mode selected but no PubSub configuration provided");
+			}
+
+			pubsubWriter = std::make_shared<PubSubWriter>(
+				cc->pubSubConfig->project_id, "ctl-member-status-update-stream", _myAddressStr);
+
 			_statusWriter = std::make_shared<BigTableStatusWriter>(
-				cc->bigTableConfig->project_id, cc->bigTableConfig->instance_id, cc->bigTableConfig->table_id);
+				cc->bigTableConfig->project_id, cc->bigTableConfig->instance_id, cc->bigTableConfig->table_id,
+				pubsubWriter);
 			break;
 		case STATUS_WRITER_MODE_PGSQL:
 		default:
@@ -1439,9 +1454,9 @@ void CentralDB::onlineNotificationThread()
 				char ipTmp[64];
 				OSUtils::ztsnprintf(nwidTmp, sizeof(nwidTmp), "%.16llx", nwid_i);
 				OSUtils::ztsnprintf(memTmp, sizeof(memTmp), "%.10llx", i->first.second);
-				nlohmann::json jtmp1, jtmp2;
+				nlohmann::json network, member;
 
-				if (! get(nwid_i, jtmp1, i->first.second, jtmp2)) {
+				if (! get(nwid_i, network, i->first.second, member)) {
 					continue;	// skip non existent networks/members
 				}
 
@@ -1469,12 +1484,14 @@ void CentralDB::onlineNotificationThread()
 				std::vector<std::string> osArchSplit = split(osArch, '/');
 				std::string os = "unknown";
 				std::string arch = "unknown";
+				std::string frontend = member["frontend"].get<std::string>();
 				if (osArchSplit.size() == 2) {
 					os = osArchSplit[0];
 					arch = osArchSplit[1];
 				}
 
-				_statusWriter->updateNodeStatus(networkId, memberId, os, arch, "", i->second.physicalAddress, ts);
+				_statusWriter->updateNodeStatus(
+					networkId, memberId, os, arch, "", i->second.physicalAddress, ts, frontend);
 			}
 			_statusWriter->writePending();
 			w.commit();

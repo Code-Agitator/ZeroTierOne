@@ -3,14 +3,21 @@
 
 #include "StatusWriter.hpp"
 
+#include <memory>
 #include <mutex>
 #include <string>
 
 namespace ZeroTier {
 
+class PubSubWriter;
+
 class BigTableStatusWriter : public StatusWriter {
   public:
-	BigTableStatusWriter(const std::string& project_id, const std::string& instance_id, const std::string& table_id);
+	BigTableStatusWriter(
+		const std::string& project_id,
+		const std::string& instance_id,
+		const std::string& table_id,
+		std::shared_ptr<PubSubWriter> pubsubWriter);
 	virtual ~BigTableStatusWriter();
 
 	virtual void updateNodeStatus(
@@ -20,7 +27,8 @@ class BigTableStatusWriter : public StatusWriter {
 		const std::string& arch,
 		const std::string& version,
 		const InetAddress& address,
-		int64_t last_seen) override;
+		int64_t last_seen,
+		const std::string& frontend) override;
 	virtual size_t queueLength() const override;
 	virtual void writePending() override;
 
@@ -31,6 +39,7 @@ class BigTableStatusWriter : public StatusWriter {
 
 	mutable std::mutex _lock;
 	std::vector<PendingStatusEntry> _pending;
+	std::shared_ptr<PubSubWriter> _pubsubWriter;
 };
 
 }	// namespace ZeroTier

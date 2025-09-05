@@ -2,6 +2,7 @@
 #include "PubSubListener.hpp"
 
 #include "ControllerConfig.hpp"
+#include "CtlUtil.hpp"
 #include "DB.hpp"
 #include "member.pb.h"
 #include "network.pb.h"
@@ -22,8 +23,8 @@ namespace pubsub_admin = ::google::cloud::pubsub_admin;
 
 namespace ZeroTier {
 
-nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc);
-nlohmann::json toJson(const pbmessages::MemberChange_Member& mc);
+nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::NetworkChange_ChangeSource source);
+nlohmann::json toJson(const pbmessages::MemberChange_Member& mc, pbmessages::MemberChange_ChangeSource source);
 
 PubSubListener::PubSubListener(std::string controller_id, std::string project, std::string topic)
 	: _controller_id(controller_id)
@@ -36,27 +37,10 @@ PubSubListener::PubSubListener(std::string controller_id, std::string project, s
 {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-	// Create Topic if it doesn't exist
-	// this is only really needed for testing with the emulator
-	// in production the topic should be created via terraform or gcloud
-	// before starting the controller
-	auto topicAdminClient = pubsub_admin::TopicAdminClient(pubsub_admin::MakeTopicAdminConnection());
-	auto topicName = pubsub::Topic(project, topic).FullName();
-	auto topicResult = topicAdminClient.GetTopic(topicName);
-	if (! topicResult.ok()) {
-		// Only create if not found
-		if (topicResult.status().code() == google::cloud::StatusCode::kNotFound) {
-			auto createResult = topicAdminClient.CreateTopic(topicName);
-			if (! createResult.ok()) {
-				fprintf(stderr, "Failed to create topic: %s\n", createResult.status().message().c_str());
-				throw std::runtime_error("Failed to create topic");
-			}
-			fprintf(stderr, "Created topic: %s\n", topicName.c_str());
-		}
-		else {
-			fprintf(stderr, "Failed to get topic: %s\n", topicResult.status().message().c_str());
-			throw std::runtime_error("Failed to get topic");
-		}
+	// If PUBSUB_EMULATOR_HOST is set, create the topic if it doesn't exist
+	const char* emulatorHost = std::getenv("PUBSUB_EMULATOR_HOST");
+	if (emulatorHost != nullptr) {
+		create_gcp_pubsub_topic_if_needed(project, topic);
 	}
 
 	google::pubsub::v1::Subscription request;
@@ -160,11 +144,11 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 		nlohmann::json oldConfig, newConfig;
 
 		if (nc.has_old()) {
-			oldConfig = toJson(nc.old());
+			oldConfig = toJson(nc.old(), nc.change_source());
 		}
 
 		if (nc.has_new_()) {
-			newConfig = toJson(nc.new_());
+			newConfig = toJson(nc.new_(), nc.change_source());
 		}
 
 		if (oldConfig.is_object() && newConfig.is_object()) {
@@ -239,11 +223,11 @@ void PubSubMemberListener::onNotification(const std::string& payload)
 		nlohmann::json oldConfig, newConfig;
 
 		if (mc.has_old()) {
-			oldConfig = toJson(mc.old());
+			oldConfig = toJson(mc.old(), mc.change_source());
 		}
 
 		if (mc.has_new_()) {
-			newConfig = toJson(mc.new_());
+			newConfig = toJson(mc.new_(), mc.change_source());
 		}
 
 		if (oldConfig.is_object() && newConfig.is_object()) {
@@ -293,7 +277,7 @@ void PubSubMemberListener::onNotification(const std::string& payload)
 	}
 }
 
-nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc)
+nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::NetworkChange_ChangeSource source)
 {
 	nlohmann::json out;
 
@@ -386,11 +370,25 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc)
 		}
 	}
 	out["ssoConfig"] = sso;
+	switch (source) {
+		case pbmessages::NetworkChange_ChangeSource_CV1:
+			out["change_source"] = "cv1";
+			break;
+		case pbmessages::NetworkChange_ChangeSource_CV2:
+			out["change_source"] = "cv2";
+			break;
+		case pbmessages::NetworkChange_ChangeSource_CONTROLLER:
+			out["change_source"] = "controller";
+			break;
+		default:
+			out["change_source"] = "unknown";
+			break;
+	}
 
 	return out;
 }
 
-nlohmann::json toJson(const pbmessages::MemberChange_Member& mc)
+nlohmann::json toJson(const pbmessages::MemberChange_Member& mc, pbmessages::MemberChange_ChangeSource source)
 {
 	nlohmann::json out;
 	out["id"] = mc.device_id();
@@ -428,6 +426,20 @@ nlohmann::json toJson(const pbmessages::MemberChange_Member& mc)
 	out["versionMinor"] = mc.version_minor();
 	out["versionRev"] = mc.version_rev();
 	out["versionProtocol"] = mc.version_protocol();
+	switch (source) {
+		case pbmessages::MemberChange_ChangeSource_CV1:
+			out["change_source"] = "cv1";
+			break;
+		case pbmessages::MemberChange_ChangeSource_CV2:
+			out["change_source"] = "cv2";
+			break;
+		case pbmessages::MemberChange_ChangeSource_CONTROLLER:
+			out["change_source"] = "controller";
+			break;
+		default:
+			out["change_source"] = "unknown";
+			break;
+	}
 
 	return out;
 }

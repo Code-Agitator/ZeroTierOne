@@ -47,6 +47,8 @@ if (ZT1_CENTRAL_CONTROLLER)
         PostgreSQL.hpp
         PubSubListener.cpp
         PubSubListener.hpp
+        PubSubWriter.cpp
+        PubSubWriter.hpp
         Redis.hpp
         RedisListener.cpp
         RedisListener.hpp

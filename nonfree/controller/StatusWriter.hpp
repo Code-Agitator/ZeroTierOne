@@ -23,7 +23,8 @@ class StatusWriter {
 		const std::string& arch,
 		const std::string& version,
 		const InetAddress& address,
-		int64_t last_seen) = 0;
+		int64_t last_seen,
+		const std::string& target) = 0;
 	virtual size_t queueLength() const = 0;
 	virtual void writePending() = 0;
 };
@@ -36,6 +37,7 @@ struct PendingStatusEntry {
 	std::string version;
 	InetAddress address;
 	int64_t last_seen;
+	std::string target;
 };
 
 }	// namespace ZeroTier

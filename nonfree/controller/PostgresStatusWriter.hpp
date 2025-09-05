@@ -23,7 +23,8 @@ class PostgresStatusWriter : public StatusWriter {
 		const std::string& arch,
 		const std::string& version,
 		const InetAddress& address,
-		int64_t last_seen) override;
+		int64_t last_seen,
+		const std::string& /* frontend unused */) override;
 	virtual size_t queueLength() const override;
 	virtual void writePending() override;
 
