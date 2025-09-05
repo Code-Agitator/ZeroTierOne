@@ -60,7 +60,15 @@ message NetworkChange {
         string rules_source = 24; // source code for rules
     }
 
+    enum ChangeSource {
+        UNKNOWN = 0;
+        CV1 = 1;
+        CV2 = 2;
+        CONTROLLER = 3;
+    }
+
     optional Network old = 1;
     optional Network new = 2;
     optional NetworkChangeMetadata metadata = 3;
+    optional ChangeSource change_source = 4;
 }

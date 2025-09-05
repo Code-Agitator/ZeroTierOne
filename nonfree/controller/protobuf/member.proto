@@ -33,7 +33,15 @@ message MemberChange {
         string controller_id = 2; 
     }
 
+    enum ChangeSource {
+        UNKNOWN = 0;
+        CV1 = 1;
+        CV2 = 2;
+        CONTROLLER = 3;
+    }
+
     optional Member old = 1;
     optional Member new = 2;
     optional MemberChangeMetadata metadata = 3;
+    optional ChangeSource change_source = 4;
 }
