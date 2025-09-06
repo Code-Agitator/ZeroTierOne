@@ -19,6 +19,7 @@ if(CPU_ARCHITECTURE STREQUAL "x86_64")
         -DZT_USE_X64_ASM_SALSA2012=1 
         -DZT_USE_FAST_X64_ED25519=1
     )
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -z noexecstack")
 elseif(CPU_ARCHITECTURE STREQUAL "aarch64")
     add_definitions(-DZT_ARCHITECTURE=4 -DZT_ARCH_ARM_HAS_NEON=1 -DZT_SSO_SUPPORTED=1 -DZT_AES_NEON=1)
     add_compile_options(-march=armv8-a+crypto -mtune=generic -mstrict-align)
@@ -80,7 +81,7 @@ add_library(rustybits STATIC IMPORTED GLOBAL)
 set_property(TARGET rustybits PROPERTY IMPORTED_LOCATION ${RUSTYBITS_LIB})
 add_dependencies(rustybits rustybits_build)
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -z noexecstack")
+
 
 # Get & build dependencies not in conda
 include (cmake/cpp-httplib.cmake)
@@ -124,6 +125,14 @@ if(ZT1_CENTRAL_CONTROLLER)
         )
 endif()
 
+if (APPLE)
+    find_library(COREFOUNDATION_LIBRARY CoreFoundation)
+    find_library(SECURITY_LIBRARY Security)
+    find_library(SYSTEM_CONFIGURATION_LIBRARY SystemConfiguration)
+    find_library(CARBON Carbon)
+    find_library(CORESERVICES_LIBRARY CoreServices)
+    list(APPEND LINKED_LIBRARIES ${COREFOUNDATION_LIBRARY} ${SECURITY_LIBRARY} ${CARBON_LIBRARY} ${SYSTEM_CONFIGURATION_LIBRARY} ${CORESERVICES_LIBRARY})
+endif()
 
 add_executable(zerotier-one 
     one.cpp 

@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.13)
 project(zerotier-osdep LANGUAGES CXX ASM)
 
+if(APPLE)
+    enable_language(OBJCXX)
+endif()
+
 set(SRC_FILES
     Arp.cpp
     Arp.hpp
@@ -39,12 +43,14 @@ if(LINUX)
         LinuxNetLink.hpp)
 endif()
 
-if(MACOS)
+if(APPLE)
     list(APPEND SRC_FILES
-        MacOSEthernetTap.cpp
-        MacOSEthernetTap.hpp
+        MacEthernetTap.cpp
+        MacEthernetTap.hpp
         MacKextEthernetTap.cpp
-        MacKextEthernetTap.hpp)
+        MacKextEthernetTap.hpp
+        MacDNSHelper.mm
+        MacDNSHelper.hpp)
 endif()
 
 add_library(zerotier-osdep STATIC ${SRC_FILES})
