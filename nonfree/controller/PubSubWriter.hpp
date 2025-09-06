@@ -10,7 +10,7 @@ namespace ZeroTier {
 
 class PubSubWriter {
   public:
-	PubSubWriter(std::string controller_id, std::string project, std::string topic);
+	PubSubWriter(std::string project, std::string topic, std::string controller_id);
 	virtual ~PubSubWriter();
 
 	bool publishNetworkChange(const nlohmann::json& networkJson, const std::string& frontend = "");

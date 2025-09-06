@@ -3,6 +3,7 @@
 
 #include "StatusWriter.hpp"
 
+#include <google/cloud/bigtable/table.h>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -40,6 +41,7 @@ class BigTableStatusWriter : public StatusWriter {
 	mutable std::mutex _lock;
 	std::vector<PendingStatusEntry> _pending;
 	std::shared_ptr<PubSubWriter> _pubsubWriter;
+	google::cloud::bigtable::Table* _table;
 };
 
 }	// namespace ZeroTier

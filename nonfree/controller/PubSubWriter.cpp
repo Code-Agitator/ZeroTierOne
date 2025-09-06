@@ -15,11 +15,14 @@
 namespace pubsub = ::google::cloud::pubsub;
 
 namespace ZeroTier {
-PubSubWriter::PubSubWriter(std::string controller_id, std::string project, std::string topic)
+PubSubWriter::PubSubWriter(std::string project, std::string topic, std::string controller_id)
 	: _controller_id(controller_id)
 	, _project(project)
 	, _topic(topic)
 {
+	fprintf(
+		stderr, "PubSubWriter for controller %s project %s topic %s\n", controller_id.c_str(), project.c_str(),
+		topic.c_str());
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	// If PUBSUB_EMULATOR_HOST is set, create the topic if it doesn't exist

@@ -80,9 +80,9 @@ if [ "$ZT_USE_BIGTABLE" == "true" ]; then
     fi
 
     BIGTABLE_CONF=", \"bigtable\": {
-        \"project\": \"${ZT_BIGTABLE_PROJECT}\",
-        \"instance\": \"${ZT_BIGTABLE_INSTANCE}\",
-        \"table\": \"${ZT_BIGTABLE_TABLE}\"
+        \"project_id\": \"${ZT_BIGTABLE_PROJECT}\",
+        \"instance_id\": \"${ZT_BIGTABLE_INSTANCE}\",
+        \"table_id\": \"${ZT_BIGTABLE_TABLE}\"
     }
     "
 fi
@@ -96,7 +96,7 @@ if [ "$ZT_USE_PUBSUB" == "true" ]; then
     fi
 
     PUBSUB_CONF=", \"pubsub\": {
-        \"project\": \"${ZT_CTL_PUBSUB_PROJECT}\"
+        \"project_id\": \"${ZT_PUBSUB_PROJECT}\"
     }
 "
 fi
@@ -161,6 +161,10 @@ if [ -n "$ZT_TEMPORAL_HOST" ] && [ -n "$ZT_TEMPORAL_PORT" ]; then
     echo "Temporal is up"
 fi
 
+cat /var/lib/zerotier-one/local.conf
+
+export GOOGLE_CLOUD_CPP_ENABLE_CLOG=yes
+export LIBC_FATAL_STDERR_=1
 export GLIBCXX_FORCE_NEW=1
 export GLIBCPP_FORCE_NEW=1
 export LD_PRELOAD="/opt/conda/envs/central_controller/lib/libjemalloc.so.2"

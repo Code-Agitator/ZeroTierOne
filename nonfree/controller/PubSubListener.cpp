@@ -30,11 +30,14 @@ PubSubListener::PubSubListener(std::string controller_id, std::string project, s
 	: _controller_id(controller_id)
 	, _project(project)
 	, _topic(topic)
-	, _subscription_id("sub-" + controller_id + "-network-changes")
+	, _subscription_id("sub-" + controller_id + "-" + topic)
 	, _run(false)
 	, _adminClient(pubsub_admin::MakeSubscriptionAdminConnection())
 	, _subscription(pubsub::Subscription(_project, _subscription_id))
 {
+	fprintf(
+		stderr, "PubSubListener for controller %s project %s topic %s subscription %s\n", controller_id.c_str(),
+		project.c_str(), topic.c_str(), _subscription_id.c_str());
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	// If PUBSUB_EMULATOR_HOST is set, create the topic if it doesn't exist

@@ -147,6 +147,7 @@ CentralDB::CentralDB(
 
 	switch (listenMode) {
 		case LISTENER_MODE_REDIS:
+			fprintf(stderr, "Using Redis for change listeners\n");
 			if (_cc->redisConfig != NULL) {
 				if (_cc->redisConfig->clusterMode) {
 					_membersDbWatcher = std::make_shared<RedisMemberListener>(_myAddressStr, _cluster, this);
@@ -161,6 +162,7 @@ CentralDB::CentralDB(
 				throw std::runtime_error("CentralDB: Redis listener mode selected but no Redis configuration provided");
 			}
 		case LISTENER_MODE_PUBSUB:
+			fprintf(stderr, "Using PubSub for change listeners\n");
 			if (cc->pubSubConfig != NULL) {
 				_membersDbWatcher =
 					std::make_shared<PubSubMemberListener>(_myAddressStr, cc->pubSubConfig->project_id, this);
@@ -174,6 +176,7 @@ CentralDB::CentralDB(
 			break;
 		case LISTENER_MODE_PGSQL:
 		default:
+			fprintf(stderr, "Using PostgreSQL for change listeners\n");
 			_membersDbWatcher = std::make_shared<PostgresMemberListener>(this, _pool, "member_" + _myAddressStr, 5);
 			_networksDbWatcher = std::make_shared<PostgresNetworkListener>(this, _pool, "network_" + _myAddressStr, 5);
 			break;
@@ -182,6 +185,7 @@ CentralDB::CentralDB(
 	std::shared_ptr<PubSubWriter> pubsubWriter;
 	switch (statusMode) {
 		case STATUS_WRITER_MODE_REDIS:
+			fprintf(stderr, "Using Redis for status writer\n");
 			if (_cc->redisConfig != NULL) {
 				if (_cc->redisConfig->clusterMode) {
 					_statusWriter = std::make_shared<RedisStatusWriter>(_cluster, _myAddressStr);
@@ -195,6 +199,7 @@ CentralDB::CentralDB(
 			}
 			break;
 		case STATUS_WRITER_MODE_BIGTABLE:
+			fprintf(stderr, "Using BigTable for status writer\n");
 			if (cc->bigTableConfig == NULL) {
 				throw std::runtime_error(
 					"CentralDB: BigTable status mode selected but no BigTable configuration provided");
@@ -213,6 +218,7 @@ CentralDB::CentralDB(
 			break;
 		case STATUS_WRITER_MODE_PGSQL:
 		default:
+			fprintf(stderr, "Using PostgreSQL for status writer\n");
 			_statusWriter = std::make_shared<PostgresStatusWriter>(_pool);
 			break;
 	}
@@ -823,7 +829,7 @@ void CentralDB::initializeMembers()
 			"(EXTRACT(EPOCH FROM nm.creation_time AT TIME ZONE 'UTC')*1000)::bigint, nm.identity, "
 			"(EXTRACT(EPOCH FROM nm.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
 			"(EXTRACT(EPOCH FROM nm.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"nm.remote_trace_level, nm.remote_trace_target, nm.revision, nm.capabilities, nm.tags "
+			"nm.remote_trace_level, nm.remote_trace_target, nm.revision, nm.capabilities, nm.tags, "
 			"nm.frontend "
 			"FROM network_memberships_ctl nm "
 			"INNER JOIN networks_ctl n "
@@ -1492,6 +1498,7 @@ void CentralDB::onlineNotificationThread()
 
 				_statusWriter->updateNodeStatus(
 					networkId, memberId, os, arch, "", i->second.physicalAddress, ts, frontend);
+				fprintf(stderr, "sent node status update\n");
 			}
 			_statusWriter->writePending();
 			w.commit();
