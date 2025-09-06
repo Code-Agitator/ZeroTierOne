@@ -22,6 +22,8 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/miniupnp/libnatpmp.git
     GIT_TAG master
     GIT_SHALLOW ON
+    PATCH_COMMAND git apply ${CMAKE_SOURCE_DIR}/ext/cmake-patches/libnatpmp.patch
+    UPDATE_DISCONNECTED TRUE
 )
 FetchContent_MakeAvailable(libnatpmp)
 
