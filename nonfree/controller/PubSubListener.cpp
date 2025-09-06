@@ -87,7 +87,6 @@ void PubSubListener::subscribe()
 				auto scope = tracer->WithActiveSpan(span);
 				span->SetAttribute("message_id", m.message_id());
 				span->SetAttribute("ordering_key", m.ordering_key());
-				span->SetAttribute("attributes", m.attributes().size());
 
 				fprintf(stderr, "Received message %s\n", m.message_id().c_str());
 				onNotification(m.data());
