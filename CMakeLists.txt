@@ -4,7 +4,7 @@ cmake_minimum_required (VERSION 3.13)
 project (zerotier-one LANGUAGES CXX C)
 
 option(ZT1_CENTRAL_CONTROLLER "Build with ZeroTier Central Controller support" OFF)
-oiption(ADDRESS_SANITIZER "Build with Address Sanitizer enabled (only for x86_64/arm64)" OFF
+option(ADDRESS_SANITIZER "Build with Address Sanitizer enabled (only for x86_64/arm64)" OFF
 )
 set (PROJ_DIR ${PROJECT_SOURCE_DIR})
 
