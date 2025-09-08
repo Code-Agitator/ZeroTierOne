@@ -4,12 +4,14 @@ cmake_minimum_required (VERSION 3.13)
 project (zerotier-one LANGUAGES CXX C)
 
 option(ZT1_CENTRAL_CONTROLLER "Build with ZeroTier Central Controller support" OFF)
-
+oiption(ADDRESS_SANITIZER "Build with Address Sanitizer enabled (only for x86_64/arm64)" OFF
+)
 set (PROJ_DIR ${PROJECT_SOURCE_DIR})
 
 execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE CPU_ARCHITECTURE)
 set(CPU_ARCHITECTURE ${CPU_ARCHITECTURE} CACHE STRING "Target CPU architecture (detected automatically)")
 message(STATUS "Detected CPU architecture: ${CPU_ARCHITECTURE}")
+
 if(CPU_ARCHITECTURE STREQUAL "x86_64")
     add_definitions(
         -DZT_ARCHITECTURE=2 
@@ -20,9 +22,19 @@ if(CPU_ARCHITECTURE STREQUAL "x86_64")
         -DZT_USE_FAST_X64_ED25519=1
     )
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -z noexecstack")
-elseif(CPU_ARCHITECTURE STREQUAL "aarch64")
+
+    if(ADDRESS_SANITIZER)
+        add_compile_options(-fsanitize=address)
+        add_link_options(-fsanitize=address)
+    endif()
+elseif(CPU_ARCHITECTURE STREQUAL "aarch64" OR CPU_ARCHITECTURE STREQUAL "arm64")
     add_definitions(-DZT_ARCHITECTURE=4 -DZT_ARCH_ARM_HAS_NEON=1 -DZT_SSO_SUPPORTED=1 -DZT_AES_NEON=1)
     add_compile_options(-march=armv8-a+crypto -mtune=generic -mstrict-align)
+    
+    if(ADDRESS_SANITIZER)
+        add_compile_options(-fsanitize=address)
+        add_link_options(-fsanitize=address)
+    endif()
 endif()
 
 include(FetchContent)

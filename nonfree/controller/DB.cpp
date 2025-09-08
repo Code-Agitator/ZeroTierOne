@@ -216,14 +216,21 @@ bool DB::get(const uint64_t networkId, nlohmann::json& network, const uint64_t m
 	return true;
 }
 
-bool DB::get(const uint64_t networkId, nlohmann::json& network, const uint64_t memberId, nlohmann::json& member, NetworkSummaryInfo& info)
+bool DB::get(
+	const uint64_t networkId,
+	nlohmann::json& network,
+	const uint64_t memberId,
+	nlohmann::json& member,
+	NetworkSummaryInfo& info)
 {
 	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 	auto tracer = provider->GetTracer("db");
 	auto span = tracer->StartSpan("db::getNetworkAndMemberAndSummary");
 	auto scope = tracer->WithActiveSpan(span);
-	char networkIdStr[17];
-	char memberIdStr[11];
+	char networkIdStr[32];
+	memset(networkIdStr, 0, sizeof(networkIdStr));
+	char memberIdStr[32];
+	memset(memberIdStr, 0, sizeof(memberIdStr));
 	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
 	span->SetAttribute("member_id", Utils::hex(memberId, memberIdStr));
 
