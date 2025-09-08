@@ -1491,13 +1491,18 @@ void CentralDB::onlineNotificationThread()
 				std::string os = "unknown";
 				std::string arch = "unknown";
 				std::string frontend = member["frontend"].get<std::string>();
+
+				std::string vMajor = OSUtils::jsonString(member["vMajor"], "0");
+				std::string vMinor = OSUtils::jsonString(member["vMinor"], "0");
+				std::string vRev = OSUtils::jsonString(member["vRev"], "0");
+				std::string version = "v" + vMajor + "." + vMinor + "." + vRev;
 				if (osArchSplit.size() == 2) {
 					os = osArchSplit[0];
 					arch = osArchSplit[1];
 				}
 
 				_statusWriter->updateNodeStatus(
-					networkId, memberId, os, arch, "", i->second.physicalAddress, ts, frontend);
+					networkId, memberId, os, arch, version, i->second.physicalAddress, ts, frontend);
 				fprintf(stderr, "sent node status update\n");
 			}
 			_statusWriter->writePending();
