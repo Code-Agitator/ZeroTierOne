@@ -80,6 +80,21 @@ std::string url_encode(const std::string& value)
 	return escaped.str();
 }
 
+std::string random_hex_string(std::size_t length)
+{
+	static const char hex_chars[] = "0123456789abcdef";
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> dis(0, 15);
+
+	std::string result;
+	result.reserve(length);
+	for (std::size_t i = 0; i < length; ++i) {
+		result += hex_chars[dis(gen)];
+	}
+	return result;
+}
+
 #ifdef ZT1_CENTRAL_CONTROLLER
 void create_gcp_pubsub_topic_if_needed(std::string project_id, std::string topic_id)
 {

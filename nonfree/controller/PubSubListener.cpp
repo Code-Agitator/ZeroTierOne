@@ -35,6 +35,7 @@ PubSubListener::PubSubListener(std::string controller_id, std::string project, s
 	, _adminClient(pubsub_admin::MakeSubscriptionAdminConnection())
 	, _subscription(pubsub::Subscription(_project, _subscription_id))
 {
+	_subscription_id = _subscription_id + "-" + random_hex_string(8);
 	fprintf(
 		stderr, "PubSubListener for controller %s project %s topic %s subscription %s\n", controller_id.c_str(),
 		project.c_str(), topic.c_str(), _subscription_id.c_str());
