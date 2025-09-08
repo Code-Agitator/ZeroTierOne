@@ -164,7 +164,8 @@ bool DB::get(const uint64_t networkId, nlohmann::json& network)
 	auto tracer = provider->GetTracer("db");
 	auto span = tracer->StartSpan("db::getNetwork");
 	auto scope = tracer->WithActiveSpan(span);
-	char networkIdStr[17];
+	char networkIdStr[32];
+	memset(networkIdStr, 0, sizeof(networkIdStr));
 	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
 
 	waitForReady();
@@ -190,8 +191,10 @@ bool DB::get(const uint64_t networkId, nlohmann::json& network, const uint64_t m
 	auto tracer = provider->GetTracer("db");
 	auto span = tracer->StartSpan("db::getNetworkAndMember");
 	auto scope = tracer->WithActiveSpan(span);
-	char networkIdStr[17];
-	char memberIdStr[11];
+	char networkIdStr[32];
+	memset(networkIdStr, 0, sizeof(networkIdStr));
+	char memberIdStr[32];
+	memset(memberIdStr, 0, sizeof(memberIdStr));
 	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
 	span->SetAttribute("member_id", Utils::hex(networkId, memberIdStr));
 
@@ -263,7 +266,8 @@ bool DB::get(const uint64_t networkId, nlohmann::json& network, std::vector<nloh
 	auto tracer = provider->GetTracer("db");
 	auto span = tracer->StartSpan("db::getNetworkAndMembers");
 	auto scope = tracer->WithActiveSpan(span);
-	char networkIdStr[17];
+	char networkIdStr[32];
+	memset(networkIdStr, 0, sizeof(networkIdStr));
 	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
 
 	waitForReady();
