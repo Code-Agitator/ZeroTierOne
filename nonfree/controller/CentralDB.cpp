@@ -1503,7 +1503,6 @@ void CentralDB::onlineNotificationThread()
 
 				_statusWriter->updateNodeStatus(
 					networkId, memberId, os, arch, version, i->second.physicalAddress, ts, frontend);
-				fprintf(stderr, "sent node status update\n");
 			}
 			_statusWriter->writePending();
 			w.commit();
