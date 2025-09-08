@@ -103,9 +103,9 @@ bool PubSubWriter::publishStatusChange(
 	auto span = tracer->StartSpan("PubSubWriter::publishStatusChange");
 	auto scope = tracer->WithActiveSpan(span);
 
-	pbmessages::MemberStatus_MemberStatusMetadata metadata;
-	metadata.set_controller_id(_controller_id);
-	metadata.set_trace_id("");	 // TODO: generate a trace ID
+	pbmessages::MemberStatus_MemberStatusMetadata* metadata = new pbmessages::MemberStatus_MemberStatusMetadata();
+	metadata->set_controller_id(_controller_id);
+	metadata->set_trace_id("");	  // TODO: generate a trace ID
 
 	pbmessages::MemberStatus ms;
 	ms.set_network_id(network_id);
@@ -114,7 +114,7 @@ bool PubSubWriter::publishStatusChange(
 	ms.set_arch(arch);
 	ms.set_version(version);
 	ms.set_timestamp(last_seen);
-	ms.set_allocated_metadata(&metadata);
+	ms.set_allocated_metadata(metadata);
 
 	std::string payload;
 	if (! ms.SerializeToString(&payload)) {
