@@ -73,6 +73,11 @@ PubSubListener::~PubSubListener()
 	if (_subscriberThread.joinable()) {
 		_subscriberThread.join();
 	}
+
+	auto status = _adminClient.DeleteSubscription(_subscription.FullName());
+	if (! status.ok()) {
+		fprintf(stderr, "Failed to delete subscription: %s\n", status.message().c_str());
+	}
 }
 
 void PubSubListener::subscribe()
