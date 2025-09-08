@@ -94,10 +94,36 @@ void BigTableStatusWriter::writePending()
 	cbt::BulkMutation bulk;
 	for (const auto& entry : toWrite) {
 		std::string row_key = entry.network_id + "#" + entry.node_id;
+
+		// read the latest values from BigTable for this row key
+		std::map<std::string, std::string> latest_values;
+		try {
+			auto row = _table->ReadRow(row_key, cbt::Filter::Latest(1));
+			if (row->first) {
+				for (const auto& cell : row->second.cells()) {
+					if (cell.family_name() == nodeInfoColumnFamily) {
+						latest_values[cell.column_qualifier()] = cell.value();
+					}
+				}
+			}
+		}
+		catch (const std::exception& e) {
+			fprintf(stderr, "Exception reading from BigTable: %s\n", e.what());
+		}
+
 		cbt::SingleRowMutation m(row_key);
-		m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, osColumn, entry.os));
-		m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, archColumn, entry.arch));
-		m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, versionColumn, entry.version));
+
+		// only update if value has changed
+		if (latest_values[osColumn] != entry.os) {
+			m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, osColumn, entry.os));
+		}
+		if (latest_values[archColumn] != entry.arch) {
+			m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, archColumn, entry.arch));
+		}
+		if (latest_values[versionColumn] != entry.version) {
+			m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, versionColumn, entry.version));
+		}
+
 		char buf[64] = { 0 };
 		std::string addressStr = entry.address.toString(buf);
 		if (entry.address.ss_family == AF_INET) {
