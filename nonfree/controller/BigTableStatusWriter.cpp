@@ -25,12 +25,10 @@ const std::string lastSeenColumn = "last_seen";
 BigTableStatusWriter::BigTableStatusWriter(
 	const std::string& project_id,
 	const std::string& instance_id,
-	const std::string& table_id,
-	std::shared_ptr<PubSubWriter> pubsubWriter)
+	const std::string& table_id)
 	: _project_id(project_id)
 	, _instance_id(instance_id)
 	, _table_id(table_id)
-	, _pubsubWriter(pubsubWriter)
 	, _table(nullptr)
 {
 	_table = new cbt::Table(cbt::MakeDataConnection(), cbt::TableResource(_project_id, _instance_id, _table_id));

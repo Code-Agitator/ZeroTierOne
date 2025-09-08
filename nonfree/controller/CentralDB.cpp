@@ -19,6 +19,7 @@
 #include "../../node/SHA512.hpp"
 #include "../../version.h"
 #include "BigTableStatusWriter.hpp"
+#include "ControllerChangeNotifier.hpp"
 #include "ControllerConfig.hpp"
 #include "CtlUtil.hpp"
 #include "EmbeddedNetworkController.hpp"
@@ -168,6 +169,7 @@ CentralDB::CentralDB(
 					std::make_shared<PubSubMemberListener>(_myAddressStr, cc->pubSubConfig->project_id, this);
 				_networksDbWatcher =
 					std::make_shared<PubSubNetworkListener>(_myAddressStr, cc->pubSubConfig->project_id, this);
+				_changeNotifier = std::make_shared<PubSubChangeNotifier>(_myAddressStr, cc->pubSubConfig->project_id);
 			}
 			else {
 				throw std::runtime_error(
@@ -209,12 +211,8 @@ CentralDB::CentralDB(
 					"CentralDB: BigTable status mode selected but no PubSub configuration provided");
 			}
 
-			pubsubWriter = std::make_shared<PubSubWriter>(
-				cc->pubSubConfig->project_id, "ctl-member-status-update-stream", _myAddressStr);
-
 			_statusWriter = std::make_shared<BigTableStatusWriter>(
-				cc->bigTableConfig->project_id, cc->bigTableConfig->instance_id, cc->bigTableConfig->table_id,
-				pubsubWriter);
+				cc->bigTableConfig->project_id, cc->bigTableConfig->instance_id, cc->bigTableConfig->table_id);
 			break;
 		case STATUS_WRITER_MODE_PGSQL:
 		default:
@@ -223,6 +221,7 @@ CentralDB::CentralDB(
 			break;
 	}
 
+	// start background threads
 	for (int i = 0; i < ZT_CENTRAL_CONTROLLER_COMMIT_THREADS; ++i) {
 		_commitThread[i] = std::thread(&CentralDB::commitThread, this);
 	}
@@ -935,7 +934,6 @@ void CentralDB::initializeMembers()
 			config["ssoExempt"] = sso_exempt.value_or(false);
 			config["authenticationExpiryTime"] = authentication_expiry_time.value_or(0);
 			config["tags"] = json::parse(tags.value_or("[]"));
-			config["ipAssignments"] = json::array();
 			config["frontend"] = std::get<17>(row);
 
 			Metrics::member_count++;
@@ -1147,8 +1145,12 @@ void CentralDB::commitThread()
 						target = config["remoteTraceTarget"];
 					}
 
-					pqxx::row nwrow = w.exec_params1("SELECT COUNT(id) FROM networks_ctl WHERE id = $1", networkId);
+					// get network and the frontend it is assigned to
+					// if network does not exist, skip member update
+					pqxx::row nwrow = w.exec_params1(
+						"SELECT COUNT(id), frontend FROM networks_ctl WHERE id = $1 GROUP BY frontend", networkId);
 					int nwcount = nwrow[0].as<int>();
+					std::string frontend = nwrow[1].as<std::string>();
 
 					if (nwcount != 1) {
 						fprintf(stderr, "network %s does not exist.  skipping member upsert\n", networkId.c_str());
@@ -1161,8 +1163,27 @@ void CentralDB::commitThread()
 						"SELECT COUNT(device_id) FROM network_memberships_ctl WHERE device_id = $1 AND network_id = $2",
 						memberId, networkId);
 					int membercount = mrow[0].as<int>();
-
 					bool isNewMember = (membercount == 0);
+
+					std::string change_source = config["change_source"];
+					if (! isNewMember && change_source != "controller" && frontend != change_source) {
+						// if it is not a new member and the change source is not the controller and doesn't match the
+						// frontend, don't apply the change.
+						continue;
+					}
+
+					if (_listenerMode == LISTENER_MODE_PUBSUB) {
+						// Publish change to pubsub stream
+
+						if (config["change_source"].is_null() || config["change_source"] == "controller") {
+							nlohmann::json oldMember;
+							nlohmann::json newMember = config;
+							if (! isNewMember) {
+								oldMember = _getNetworkMember(w, networkId, memberId);
+							}
+							_changeNotifier->notifyMemberChange(oldMember, newMember, frontend);
+						}
+					}
 
 					pqxx::result res = w.exec_params0(
 						"INSERT INTO network_memberships_ctl (device_id, network_id, authorized, active_bridge, "
@@ -1251,29 +1272,41 @@ void CentralDB::commitThread()
 
 					std::string id = config["id"];
 
+					pqxx::row nwrow = w.exec_params1(
+						"SELECT COUNT(id), frontend FROM networks_ctl WHERE id = $1 GROUP BY frontend", id);
+					int nwcount = nwrow[0].as<int>();
+					std::string frontend = nwrow[1].as<std::string>();
+					bool isNewNetwork = (nwcount == 0);
+
+					std::string change_source = config["change_source"];
+					if (! isNewNetwork && change_source != "controller" && frontend != change_source) {
+						// if it is not a new network and the change source is not the controller and doesn't match the
+						// frontend, don't apply the change.
+						continue;
+					}
+
+					if (_listenerMode == LISTENER_MODE_PUBSUB) {
+						// Publish change to pubsub stream
+						if (config["change_source"].is_null() || config["change_source"] == "controller") {
+							nlohmann::json oldNetwork;
+							nlohmann::json newNetwork = config;
+							if (! isNewNetwork) {
+								oldNetwork = _getNetwork(w, id);
+							}
+							_changeNotifier->notifyNetworkChange(oldNetwork, newNetwork, frontend);
+						}
+					}
+
 					pqxx::result res = w.exec_params0(
-						"INSERT INTO networks_ctl (id, name, configuration, controller_id, revision) "
-						"VALUES ($1, $2, $3, $4, $5) "
+						"INSERT INTO networks_ctl (id, name, configuration, controller_id, revision, frontend) "
+						"VALUES ($1, $2, $3, $4, $5, $6) "
 						"ON CONFLICT (id) DO UPDATE SET "
-						"name = EXCLUDED.name, configuration = EXCLUDED.configuration, revision = EXCLUDED.revision+1",
+						"name = EXCLUDED.name, configuration = EXCLUDED.configuration, revision = EXCLUDED.revision+1, "
+						"frontend = EXCLUDED.frontend",
 						id, OSUtils::jsonString(config["name"], ""), OSUtils::jsonDump(config, -1), _myAddressStr,
-						((uint64_t)config["revision"]));
+						((uint64_t)config["revision"]), change_source);
 
 					w.commit();
-
-					// res = w.exec_params0("DELETE FROM ztc_network_assignment_pool WHERE network_id = $1", 0);
-
-					// auto pool = config["ipAssignmentPools"];
-					// bool err = false;
-					// for (auto i = pool.begin(); i != pool.end(); ++i) {
-					// 	std::string start = (*i)["ipRangeStart"];
-					// 	std::string end = (*i)["ipRangeEnd"];
-
-					// 	res = w.exec_params0(
-					// 		"INSERT INTO ztc_network_assignment_pool (network_id, ip_range_start, ip_range_end) "
-					// 		"VALUES ($1, $2, $3)",
-					// 		id, start, end);
-					// }
 
 					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
 					if (nwidInt) {
@@ -1514,6 +1547,181 @@ void CentralDB::onlineNotificationThread()
 
 		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
+}
+
+nlohmann::json CentralDB::_getNetworkMember(pqxx::work& tx, const std::string networkID, const std::string memberID)
+{
+	nlohmann::json out;
+
+	try {
+		pqxx::row row = tx.exec_params1(
+			"SELECT nm.device_id, nm.network_id, nm.authorized, nm.active_bridge, nm.ip_assignments, "
+			"nm.no_auto_assign_ips, "
+			"nm.sso_exempt, (EXTRACT(EPOCH FROM nm.authentication_expiry_time AT TIME ZONE 'UTC')*1000)::bigint, "
+			"(EXTRACT(EPOCH FROM nm.creation_time AT TIME ZONE 'UTC')*1000)::bigint, nm.identity, "
+			"(EXTRACT(EPOCH FROM nm.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
+			"(EXTRACT(EPOCH FROM nm.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
+			"nm.remote_trace_level, nm.remote_trace_target, nm.revision, nm.capabilities, nm.tags, "
+			"nm.frontend "
+			"FROM network_memberships_ctl nm "
+			"INNER JOIN networks_ctl n "
+			"  ON nm.network_id = n.id "
+			"WHERE nm.network_id = $1 AND nm.device_id = $2",
+			networkID, memberID);
+
+		bool authorized = row[2].as<bool>();
+		std::optional<bool> active_bridge =
+			row[3].is_null() ? std::optional<bool>() : std::optional<bool>(row[3].as<bool>());
+		std::string ip_assignments = row[4].is_null() ? "{}" : row[4].as<std::string>();
+		std::optional<bool> no_auto_assign_ips =
+			row[5].is_null() ? std::optional<bool>() : std::optional<bool>(row[5].as<bool>());
+		std::optional<bool> sso_exempt =
+			row[6].is_null() ? std::optional<bool>() : std::optional<bool>(row[6].as<bool>());
+		std::optional<uint64_t> authentication_expiry_time =
+			row[7].is_null() ? std::optional<uint64_t>() : std::optional<uint64_t>(row[7].as<uint64_t>());
+		std::optional<uint64_t> creation_time =
+			row[8].is_null() ? std::optional<uint64_t>() : std::optional<uint64_t>(row[8].as<uint64_t>());
+		std::optional<std::string> identity =
+			row[9].is_null() ? std::optional<std::string>() : std::optional<std::string>(row[9].as<std::string>());
+		std::optional<uint64_t> last_authorized_time =
+			row[10].is_null() ? std::optional<uint64_t>() : std::optional<uint64_t>(row[10].as<uint64_t>());
+		std::optional<uint64_t> last_deauthorized_time =
+			row[11].is_null() ? std::optional<uint64_t>() : std::optional<uint64_t>(row[11].as<uint64_t>());
+		std::optional<int32_t> remote_trace_level =
+			row[12].is_null() ? std::optional<int32_t>() : std::optional<int32_t>(row[12].as<int32_t>());
+		std::optional<std::string> remote_trace_target =
+			row[13].is_null() ? std::optional<std::string>() : std::optional<std::string>(row[13].as<std::string>());
+		std::optional<uint64_t> revision =
+			row[14].is_null() ? std::optional<uint64_t>() : std::optional<uint64_t>(row[14].as<uint64_t>());
+		std::optional<std::string> capabilities =
+			row[15].is_null() ? std::optional<std::string>() : std::optional<std::string>(row[15].as<std::string>());
+		std::optional<std::string> tags =
+			row[16].is_null() ? std::optional<std::string>() : std::optional<std::string>(row[16].as<std::string>());
+		std::string frontend = row[17].is_null() ? "" : row[17].as<std::string>();
+
+		out["objtype"] = "member";
+		out["id"] = memberID;
+		out["nwid"] = networkID;
+		out["address"] = identity.value_or("");
+		out["authorized"] = authorized;
+		out["activeBridge"] = active_bridge.value_or(false);
+		out["ipAssignments"] = json::array();
+		if (ip_assignments != "{}" && ip_assignments != "[]") {
+			std::string tmp = ip_assignments.substr(1, ip_assignments.length() - 2);
+			std::vector<std::string> addrs = split(tmp, ',');
+			for (auto it = addrs.begin(); it != addrs.end(); ++it) {
+				out["ipAssignments"].push_back(*it);
+			}
+		}
+		out["capabilities"] = json::parse(capabilities.value_or("[]"));
+		out["creationTime"] = creation_time.value_or(0);
+		out["lastAuthorizedTime"] = last_authorized_time.value_or(0);
+		out["lastDeauthorizedTime"] = last_deauthorized_time.value_or(0);
+		out["noAutoAssignIps"] = no_auto_assign_ips.value_or(false);
+		out["remoteTraceLevel"] = remote_trace_level.value_or(0);
+		out["remoteTraceTarget"] = remote_trace_target.value_or(nullptr);
+		out["revision"] = revision.value_or(0);
+		out["ssoExempt"] = sso_exempt.value_or(false);
+		out["authenticationExpiryTime"] = authentication_expiry_time.value_or(0);
+		out["tags"] = json::parse(tags.value_or("[]"));
+		out["frontend"] = frontend;
+	}
+	catch (std::exception& e) {
+		fprintf(
+			stderr, "ERROR: Error getting network member %s-%s: %s\n", networkID.c_str(), memberID.c_str(), e.what());
+		return nlohmann::json();
+	}
+
+	return out;
+}
+
+nlohmann::json CentralDB::_getNetwork(pqxx::work& tx, const std::string networkID)
+{
+	nlohmann::json out;
+
+	try {
+		std::optional<std::string> name;
+		std::string cfg;
+		std::optional<uint64_t> creation_time;
+		std::optional<uint64_t> last_modified;
+		std::optional<uint64_t> revision;
+		std::string frontend;
+
+		pqxx::row row = tx.exec_params1(
+			"SELECT id, name, configuration , (EXTRACT(EPOCH FROM creation_time AT TIME ZONE 'UTC')*1000)::bigint, "
+			"(EXTRACT(EPOCH FROM last_modified AT TIME ZONE 'UTC')*1000)::bigint, revision, frontend "
+			"FROM networks_ctl WHERE id = $1",
+			networkID);
+
+		cfg = row[2].as<std::string>();
+		creation_time = row[3].is_null() ? std::optional<uint64_t>() : std::optional<uint64_t>(row[3].as<uint64_t>());
+		last_modified = row[4].is_null() ? std::optional<uint64_t>() : std::optional<uint64_t>(row[4].as<uint64_t>());
+		revision = row[5].is_null() ? std::optional<uint64_t>() : std::optional<uint64_t>(row[5].as<uint64_t>());
+		frontend = row[6].is_null() ? "" : row[6].as<std::string>();
+
+		nlohmann::json cfgtmp = nlohmann::json::parse(cfg);
+		if (! cfgtmp.is_object()) {
+			fprintf(stderr, "ERROR: Network %s configuration is not a JSON object\n", networkID.c_str());
+			return nlohmann::json();
+		}
+
+		out["objtype"] = "network";
+		out["id"] = row[0].as<std::string>();
+		out["name"] = row[1].is_null() ? "" : row[1].as<std::string>();
+		out["creationTime"] = creation_time.value_or(0);
+		out["lastModified"] = last_modified.value_or(0);
+		out["revision"] = revision.value_or(0);
+		out["capabilities"] = cfgtmp["capabilities"].is_array() ? cfgtmp["capabilities"] : json::array();
+		out["enableBroadcast"] = cfgtmp["enableBroadcast"].is_boolean() ? cfgtmp["enableBroadcast"].get<bool>() : false;
+		out["mtu"] = cfgtmp["mtu"].is_number() ? cfgtmp["mtu"].get<int32_t>() : 2800;
+		out["multicastLimit"] = cfgtmp["multicastLimit"].is_number() ? cfgtmp["multicastLimit"].get<int32_t>() : 64;
+		out["private"] = cfgtmp["private"].is_boolean() ? cfgtmp["private"].get<bool>() : true;
+		out["remoteTraceLevel"] =
+			cfgtmp["remoteTraceLevel"].is_number() ? cfgtmp["remoteTraceLevel"].get<int32_t>() : 0;
+		out["remoteTraceTarget"] =
+			cfgtmp["remoteTraceTarget"].is_string() ? cfgtmp["remoteTraceTarget"].get<std::string>() : "";
+		out["revision"] = revision.value_or(0);
+		out["rules"] = cfgtmp["rules"].is_array() ? cfgtmp["rules"] : json::array();
+		out["tags"] = cfgtmp["tags"].is_array() ? cfgtmp["tags"] : json::array();
+		if (cfgtmp["v4AssignMode"].is_object()) {
+			out["v4AssignMode"] = cfgtmp["v4AssignMode"];
+		}
+		else {
+			out["v4AssignMode"] = json::object();
+			out["v4AssignMode"]["zt"] = true;
+		}
+		if (cfgtmp["v6AssignMode"].is_object()) {
+			out["v6AssignMode"] = cfgtmp["v6AssignMode"];
+		}
+		else {
+			out["v6AssignMode"] = json::object();
+			out["v6AssignMode"]["zt"] = true;
+			out["v6AssignMode"]["6plane"] = true;
+			out["v6AssignMode"]["rfc4193"] = false;
+		}
+		out["ssoEnabled"] = cfgtmp["ssoEnabled"].is_boolean() ? cfgtmp["ssoEnabled"].get<bool>() : false;
+		out["objtype"] = "network";
+		out["routes"] = cfgtmp["routes"].is_array() ? cfgtmp["routes"] : json::array();
+		out["clientId"] = cfgtmp["clientId"].is_string() ? cfgtmp["clientId"].get<std::string>() : "";
+		out["authorizationEndpoint"] =
+			cfgtmp["authorizationEndpoint"].is_string() ? cfgtmp["authorizationEndpoint"].get<std::string>() : nullptr;
+		out["provider"] = cfgtmp["ssoProvider"].is_string() ? cfgtmp["ssoProvider"].get<std::string>() : "";
+		if (! cfgtmp["dns"].is_object()) {
+			cfgtmp["dns"] = json::object();
+			cfgtmp["dns"]["domain"] = "";
+			cfgtmp["dns"]["servers"] = json::array();
+		}
+		else {
+			out["dns"] = cfgtmp["dns"];
+		}
+		out["ipAssignmentPools"] = cfgtmp["ipAssignmentPools"].is_array() ? cfgtmp["ipAssignmentPools"] : json::array();
+		out["frontend"] = row[6].as<std::string>();
+	}
+	catch (std::exception& e) {
+		fprintf(stderr, "ERROR: Error getting network %s: %s\n", networkID.c_str(), e.what());
+		return nlohmann::json();
+	}
+	return out;
 }
 
 #endif	 // ZT_CONTROLLER_USE_LIBPQ

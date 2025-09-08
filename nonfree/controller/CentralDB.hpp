@@ -23,6 +23,7 @@ struct SmeeClient;
 namespace ZeroTier {
 struct RedisConfig;
 struct ControllerConfig;
+struct ControllerChangeNotifier;
 
 class CentralDB : public DB {
   public:
@@ -94,6 +95,11 @@ class CentralDB : public DB {
 	void configureSmee();
 	void notifyNewMember(const std::string& networkID, const std::string& memberID);
 
+	nlohmann::json _getNetworkMember(pqxx::work& tx, const std::string networkID, const std::string memberID);
+
+	nlohmann::json _getNetwork(pqxx::work& tx, const std::string networkID);
+
+  private:
 	enum OverrideMode { ALLOW_PGBOUNCER_OVERRIDE = 0, NO_OVERRIDE = 1 };
 
 	ListenerMode _listenerMode;
@@ -112,6 +118,7 @@ class CentralDB : public DB {
 	std::shared_ptr<NotificationListener> _membersDbWatcher;
 	std::shared_ptr<NotificationListener> _networksDbWatcher;
 	std::shared_ptr<StatusWriter> _statusWriter;
+	std::shared_ptr<ControllerChangeNotifier> _changeNotifier;
 	std::thread _commitThread[ZT_CENTRAL_CONTROLLER_COMMIT_THREADS];
 	std::thread _onlineNotificationThread;
 

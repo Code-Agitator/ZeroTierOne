@@ -25,7 +25,7 @@ message MemberChange {
         int32 version_protocol = 19; // Protocol version of the member
         int32 remote_trace_level = 20; // Remote trace level
         optional string remote_trace_target = 21; // Remote trace target
-        bool sso_exepmt = 22; // Whether SSO is exempt
+        bool sso_exempt = 22; // Whether SSO is exempt
         uint64 auth_expiry_time = 23; // Authorization expiry time in milliseconds
     }
     message MemberChangeMetadata {

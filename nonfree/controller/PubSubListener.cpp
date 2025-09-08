@@ -420,7 +420,7 @@ nlohmann::json toJson(const pbmessages::MemberChange_Member& mc, pbmessages::Mem
 	}
 
 	out["noAutoAssignIps"] = mc.no_auto_assign_ips();
-	out["ssoExempt"] = mc.sso_exepmt();
+	out["ssoExempt"] = mc.sso_exempt();
 	out["authenticationExpiryTime"] = mc.auth_expiry_time();
 	out["capabilities"] = OSUtils::jsonParse(mc.capabilities());
 	out["creationTime"] = mc.creation_time();

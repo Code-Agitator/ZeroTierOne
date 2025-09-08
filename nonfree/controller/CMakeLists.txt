@@ -42,6 +42,8 @@ if (ZT1_CENTRAL_CONTROLLER)
         CentralDB.cpp
         CentralDB.hpp
         ControllerConfig.hpp
+        ControllerChangeNotifier.cpp
+        ControllerChangeNotifier.hpp
         NotificationListener.hpp
         PostgreSQL.cpp
         PostgreSQL.hpp

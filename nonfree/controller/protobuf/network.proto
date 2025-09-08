@@ -27,7 +27,7 @@ message NetworkChange {
         bool zt = 1; // Whether ZeroTier is used for IPv4 assignment
     }
 
-    message IPv6AssignMode {
+    message IPV6AssignMode {
         bool six_plane = 1; // Whether 6plane is used for IPv6 assignment
         bool rfc4193 = 2; // Whether RFC 4193 is used for IPv6 assignment
         bool zt = 3; // Whether ZeroTier is used for IPv6 assignment
@@ -50,7 +50,7 @@ message NetworkChange {
         string rules = 14; // JSON string of rules
         optional string tags = 15; // JSON string of tags
         IPV4AssignMode ipv4_assign_mode = 16; // IPv4 assignment mode
-        IPv6AssignMode ipv6_assign_mode = 17; // IPv6 assignment mode
+        IPV6AssignMode ipv6_assign_mode = 17; // IPv6 assignment mode
         optional DNS dns = 18; // DNS configuration
         bool sso_enabled = 19; // Whether Single Sign-On is enabled
         optional string sso_client_id = 20; // SSO client ID

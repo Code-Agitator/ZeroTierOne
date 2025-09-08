@@ -14,11 +14,7 @@ class PubSubWriter;
 
 class BigTableStatusWriter : public StatusWriter {
   public:
-	BigTableStatusWriter(
-		const std::string& project_id,
-		const std::string& instance_id,
-		const std::string& table_id,
-		std::shared_ptr<PubSubWriter> pubsubWriter);
+	BigTableStatusWriter(const std::string& project_id, const std::string& instance_id, const std::string& table_id);
 	virtual ~BigTableStatusWriter();
 
 	virtual void updateNodeStatus(
@@ -40,7 +36,6 @@ class BigTableStatusWriter : public StatusWriter {
 
 	mutable std::mutex _lock;
 	std::vector<PendingStatusEntry> _pending;
-	std::shared_ptr<PubSubWriter> _pubsubWriter;
 	google::cloud::bigtable::Table* _table;
 };
 
