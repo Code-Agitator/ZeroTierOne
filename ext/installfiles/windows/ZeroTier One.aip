@@ -21,7 +21,7 @@
     <ROW Property="AiFeatIcoZeroTierOne" Value="ZeroTierIcon.exe" Type="8"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{C74EC20B-386F-439B-9665-AE5FD40EC62F} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{C805CD5B-45F5-49F7-B428-142396DE03CA} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
     <ROW Property="ProductVersion" Value="1.16.0" Options="32"/>
