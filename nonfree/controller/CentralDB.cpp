@@ -1563,10 +1563,19 @@ void CentralDB::onlineNotificationThread()
 				std::string arch = "unknown";
 				std::string frontend = member["frontend"].get<std::string>();
 
-				std::string vMajor = OSUtils::jsonString(member["vMajor"], "0");
-				std::string vMinor = OSUtils::jsonString(member["vMinor"], "0");
-				std::string vRev = OSUtils::jsonString(member["vRev"], "0");
-				std::string version = "v" + vMajor + "." + vMinor + "." + vRev;
+				int vMajor = OSUtils::jsonInt(member["vMajor"], 0);
+				int vMinor = OSUtils::jsonInt(member["vMinor"], 0);
+				int vRev = OSUtils::jsonInt(member["vRev"], 0);
+				std::string version;
+				if (vMajor <= 0 && vMinor <= 0 && vRev <= 0) {
+					vMajor = 0;
+					vMinor = 0;
+					vRev = 0;
+					version = "unknown";
+				}
+				else {
+					version = "v" + std::to_string(vMajor) + "." + std::to_string(vMinor) + "." + std::to_string(vRev);
+				}
 				if (osArchSplit.size() == 2) {
 					os = osArchSplit[0];
 					arch = osArchSplit[1];
