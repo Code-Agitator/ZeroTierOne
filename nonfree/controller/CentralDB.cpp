@@ -475,26 +475,28 @@ AuthInfo CentralDB::getSSOAuthInfo(const nlohmann::json& member, const std::stri
 			std::string nonce = "";
 
 			// check if the member exists first.
-			pqxx::row count = w.exec_params1(
-				"SELECT count(id) FROM ztc_member WHERE id = $1 AND network_id = $2 AND deleted = false", memberId,
-				networkId);
+			pqxx::row count =
+				w.exec(
+					 "SELECT count(id) FROM ztc_member WHERE id = $1 AND network_id = $2 AND deleted = false",
+					 pqxx::params { memberId, networkId })
+					.one_row();
 			if (count[0].as<int>() == 1) {
 				// get active nonce, if exists.
-				pqxx::result r = w.exec_params(
+				pqxx::result r = w.exec(
 					"SELECT nonce FROM ztc_sso_expiry "
 					"WHERE network_id = $1 AND member_id = $2 "
 					"AND ((NOW() AT TIME ZONE 'UTC') <= authentication_expiry_time) AND ((NOW() AT TIME ZONE 'UTC') <= "
 					"nonce_expiration)",
-					networkId, memberId);
+					pqxx::params { networkId, memberId });
 
 				if (r.size() == 0) {
 					// no active nonce.
 					// find an unused nonce, if one exists.
-					pqxx::result r = w.exec_params(
+					pqxx::result r = w.exec(
 						"SELECT nonce FROM ztc_sso_expiry "
 						"WHERE network_id = $1 AND member_id = $2 "
 						"AND authentication_expiry_time IS NULL AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
-						networkId, memberId);
+						pqxx::params { networkId, memberId });
 
 					if (r.size() == 1) {
 						// we have an existing nonce.  Use it
@@ -508,11 +510,11 @@ AuthInfo CentralDB::getSSOAuthInfo(const nlohmann::json& member, const std::stri
 						Utils::hex(nonceBytes, sizeof(nonceBytes), nonceBuf);
 						nonce = std::string(nonceBuf);
 
-						pqxx::result ir = w.exec_params0(
+						pqxx::result ir = w.exec(
 							"INSERT INTO ztc_sso_expiry "
 							"(nonce, nonce_expiration, network_id, member_id) VALUES "
 							"($1, TO_TIMESTAMP($2::double precision/1000), $3, $4)",
-							nonce, OSUtils::now() + 300000, networkId, memberId);
+							pqxx::params { nonce, OSUtils::now() + 300000, networkId, memberId });
 
 						w.commit();
 					}
@@ -532,7 +534,7 @@ AuthInfo CentralDB::getSSOAuthInfo(const nlohmann::json& member, const std::stri
 					exit(7);
 				}
 
-				r = w.exec_params(
+				r = w.exec(
 					"SELECT oc.client_id, oc.authorization_endpoint, oc.issuer, oc.provider, oc.sso_impl_version "
 					"FROM ztc_network AS n "
 					"INNER JOIN ztc_org o "
@@ -542,7 +544,7 @@ AuthInfo CentralDB::getSSOAuthInfo(const nlohmann::json& member, const std::stri
 					"LEFT OUTER JOIN ztc_oidc_config oc "
 					"  ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
 					"WHERE n.id = $1 AND n.sso_enabled = true",
-					networkId);
+					pqxx::params { networkId });
 
 				std::string client_id = "";
 				std::string authorization_endpoint = "";
@@ -1055,13 +1057,14 @@ void CentralDB::heartbeat()
 
 			try {
 				pqxx::work w { *c->c };
-				w.exec_params0(
-					"INSERT INTO controllers_ctl (id, hostname, last_heartbeat, public_identity, version) VALUES "
-					"($1, $2, TO_TIMESTAMP($3::double precision/1000), $4, $5) "
-					"ON CONFLICT (id) DO UPDATE SET hostname = EXCLUDED.hostname, last_heartbeat = "
-					"EXCLUDED.last_heartbeat, "
-					"public_identity = EXCLUDED.public_identity, version = EXCLUDED.version",
-					controllerId, hostname, ts, publicIdentity, versionStr);
+				w.exec(
+					 "INSERT INTO controllers_ctl (id, hostname, last_heartbeat, public_identity, version) VALUES "
+					 "($1, $2, TO_TIMESTAMP($3::double precision/1000), $4, $5) "
+					 "ON CONFLICT (id) DO UPDATE SET hostname = EXCLUDED.hostname, last_heartbeat = "
+					 "EXCLUDED.last_heartbeat, "
+					 "public_identity = EXCLUDED.public_identity, version = EXCLUDED.version",
+					 pqxx::params { controllerId, hostname, ts, publicIdentity, versionStr })
+					.no_rows();
 				w.commit();
 			}
 			catch (std::exception& e) {
@@ -1147,8 +1150,11 @@ void CentralDB::commitThread()
 
 					// get network and the frontend it is assigned to
 					// if network does not exist, skip member update
-					pqxx::row nwrow = w.exec_params1(
-						"SELECT COUNT(id), frontend FROM networks_ctl WHERE id = $1 GROUP BY frontend", networkId);
+					pqxx::row nwrow =
+						w.exec(
+							 "SELECT COUNT(id), frontend FROM networks_ctl WHERE id = $1 GROUP BY frontend",
+							 pqxx::params { networkId })
+							.one_row();
 					int nwcount = nwrow[0].as<int>();
 					std::string frontend = nwrow[1].as<std::string>();
 
@@ -1159,13 +1165,18 @@ void CentralDB::commitThread()
 						continue;
 					}
 
-					pqxx::row mrow = w.exec_params1(
-						"SELECT COUNT(device_id) FROM network_memberships_ctl WHERE device_id = $1 AND network_id = $2",
-						memberId, networkId);
+					pqxx::row mrow = w.exec(
+										  "SELECT COUNT(device_id) FROM network_memberships_ctl WHERE device_id = $1 "
+										  "AND network_id = $2",
+										  pqxx::params { memberId, networkId })
+										 .one_row();
 					int membercount = mrow[0].as<int>();
 					bool isNewMember = (membercount == 0);
 
-					std::string change_source = config["change_source"];
+					std::string change_source;
+					if (! config["change_source"].is_null()) {
+						change_source = config["change_source"];
+					}
 					if (! isNewMember && change_source != "controller" && frontend != change_source) {
 						// if it is not a new member and the change source is not the controller and doesn't match the
 						// frontend, don't apply the change.
@@ -1185,37 +1196,54 @@ void CentralDB::commitThread()
 						}
 					}
 
-					pqxx::result res = w.exec_params0(
-						"INSERT INTO network_memberships_ctl (device_id, network_id, authorized, active_bridge, "
-						"ip_assignments, "
-						"no_auto_assign_ips, sso_exempt, authentication_expiry_time, capabilities, creation_time, "
-						"identity, last_authorized_time, last_deauthorized_time, "
-						"remote_trace_level, remote_trace_target, revision, tags, version_major, version_minor, "
-						"version_revision, version_protocol) "
-						"VALUES ($1, $2, $3, $4, $5, $6, $7, TO_TIMESTAMP($8::double precision/1000), $9, "
-						"TO_TIMESTAMP($10::double precision/1000), $11, TO_TIMESTAMP($12::double precision/1000), "
-						"TO_TIMESTAMP($13::double precision/1000), $14, $15, $16, $17, $18, $19, $20, $21) "
-						"ON CONFLICT (device_id, network_id) DO UPDATE SET "
-						"authorized = EXCLUDED.authorized, active_bridge = EXCLUDED.active_bridge, "
-						"ip_assignments = EXCLUDED.ip_assignments, no_auto_assign_ips = EXCLUDED.no_auto_assign_ips, "
-						"sso_exempt = EXCLUDED.sso_exempt, authentication_expiry_time = "
-						"EXCLUDED.authentication_expiry_time, "
-						"capabilities = EXCLUDED.capabilities, creation_time = EXCLUDED.creation_time, "
-						"identity = EXCLUDED.identity, last_authorized_time = EXCLUDED.last_authorized_time, "
-						"last_deauthorized_time = EXCLUDED.last_deauthorized_time, "
-						"remote_trace_level = EXCLUDED.remote_trace_level, remote_trace_target = "
-						"EXCLUDED.remote_trace_target, "
-						"revision = EXCLUDED.revision, tags = EXCLUDED.tags, version_major = EXCLUDED.version_major, "
-						"version_minor = EXCLUDED.version_minor, version_revision = EXCLUDED.version_revision, "
-						"version_protocol = EXCLUDED.version_protocol",
-						memberId, networkId, (bool)config["authorized"], (bool)config["activeBridge"],
-						config["ipAssignments"].get<std::vector<std::string> >(), (bool)config["noAutoAssignIps"],
-						(bool)config["ssoExempt"], (uint64_t)config["authenticationExpiryTime"],
-						OSUtils::jsonDump(config["capabilities"], -1), (uint64_t)config["creationTime"],
-						OSUtils::jsonString(config["identity"], ""), (uint64_t)config["lastAuthorizedTime"],
-						(uint64_t)config["lastDeauthorizedTime"], (int)config["remoteTraceLevel"], target,
-						(uint64_t)config["revision"], OSUtils::jsonDump(config["tags"], -1), (int)config["vMajor"],
-						(int)config["vMinor"], (int)config["vRev"], (int)config["vProto"]);
+					pqxx::result res =
+						w.exec(
+							 "INSERT INTO network_memberships_ctl (device_id, network_id, authorized, active_bridge, "
+							 "ip_assignments, "
+							 "no_auto_assign_ips, sso_exempt, authentication_expiry_time, capabilities, creation_time, "
+							 "identity, last_authorized_time, last_deauthorized_time, "
+							 "remote_trace_level, remote_trace_target, revision, tags, version_major, version_minor, "
+							 "version_revision, version_protocol) "
+							 "VALUES ($1, $2, $3, $4, $5, $6, $7, TO_TIMESTAMP($8::double precision/1000), $9, "
+							 "TO_TIMESTAMP($10::double precision/1000), $11, TO_TIMESTAMP($12::double precision/1000), "
+							 "TO_TIMESTAMP($13::double precision/1000), $14, $15, $16, $17, $18, $19, $20, $21) "
+							 "ON CONFLICT (device_id, network_id) DO UPDATE SET "
+							 "authorized = EXCLUDED.authorized, active_bridge = EXCLUDED.active_bridge, "
+							 "ip_assignments = EXCLUDED.ip_assignments, no_auto_assign_ips = "
+							 "EXCLUDED.no_auto_assign_ips, "
+							 "sso_exempt = EXCLUDED.sso_exempt, authentication_expiry_time = "
+							 "EXCLUDED.authentication_expiry_time, "
+							 "capabilities = EXCLUDED.capabilities, creation_time = EXCLUDED.creation_time, "
+							 "identity = EXCLUDED.identity, last_authorized_time = EXCLUDED.last_authorized_time, "
+							 "last_deauthorized_time = EXCLUDED.last_deauthorized_time, "
+							 "remote_trace_level = EXCLUDED.remote_trace_level, remote_trace_target = "
+							 "EXCLUDED.remote_trace_target, "
+							 "revision = EXCLUDED.revision, tags = EXCLUDED.tags, version_major = "
+							 "EXCLUDED.version_major, "
+							 "version_minor = EXCLUDED.version_minor, version_revision = EXCLUDED.version_revision, "
+							 "version_protocol = EXCLUDED.version_protocol",
+							 pqxx::params { memberId,
+											networkId,
+											(bool)config["authorized"],
+											(bool)config["activeBridge"],
+											config["ipAssignments"].get<std::vector<std::string> >(),
+											(bool)config["noAutoAssignIps"],
+											(bool)config["ssoExempt"],
+											(uint64_t)config["authenticationExpiryTime"],
+											OSUtils::jsonDump(config["capabilities"], -1),
+											(uint64_t)config["creationTime"],
+											OSUtils::jsonString(config["identity"], ""),
+											(uint64_t)config["lastAuthorizedTime"],
+											(uint64_t)config["lastDeauthorizedTime"],
+											(int)config["remoteTraceLevel"],
+											target,
+											(uint64_t)config["revision"],
+											OSUtils::jsonDump(config["tags"], -1),
+											(int)config["vMajor"],
+											(int)config["vMinor"],
+											(int)config["vRev"],
+											(int)config["vProto"] })
+							.no_rows();
 
 					w.commit();
 
@@ -1272,13 +1300,19 @@ void CentralDB::commitThread()
 
 					std::string id = config["id"];
 
-					pqxx::row nwrow = w.exec_params1(
-						"SELECT COUNT(id), frontend FROM networks_ctl WHERE id = $1 GROUP BY frontend", id);
+					pqxx::row nwrow =
+						w.exec(
+							 "SELECT COUNT(id), frontend FROM networks_ctl WHERE id = $1 GROUP BY frontend",
+							 pqxx::params { id })
+							.one_row();
 					int nwcount = nwrow[0].as<int>();
 					std::string frontend = nwrow[1].as<std::string>();
 					bool isNewNetwork = (nwcount == 0);
 
-					std::string change_source = config["change_source"];
+					std::string change_source;
+					if (! config["change_source"].is_null()) {
+						change_source = config["change_source"];
+					}
 					if (! isNewNetwork && change_source != "controller" && frontend != change_source) {
 						// if it is not a new network and the change source is not the controller and doesn't match the
 						// frontend, don't apply the change.
@@ -1297,14 +1331,14 @@ void CentralDB::commitThread()
 						}
 					}
 
-					pqxx::result res = w.exec_params0(
+					pqxx::result res = w.exec(
 						"INSERT INTO networks_ctl (id, name, configuration, controller_id, revision, frontend) "
 						"VALUES ($1, $2, $3, $4, $5, $6) "
 						"ON CONFLICT (id) DO UPDATE SET "
 						"name = EXCLUDED.name, configuration = EXCLUDED.configuration, revision = EXCLUDED.revision+1, "
 						"frontend = EXCLUDED.frontend",
-						id, OSUtils::jsonString(config["name"], ""), OSUtils::jsonDump(config, -1), _myAddressStr,
-						((uint64_t)config["revision"]), change_source);
+						pqxx::params { id, OSUtils::jsonString(config["name"], ""), OSUtils::jsonDump(config, -1),
+									   _myAddressStr, ((uint64_t)config["revision"]), change_source });
 
 					w.commit();
 
@@ -1354,8 +1388,8 @@ void CentralDB::commitThread()
 					pqxx::work w(*c->c);
 					std::string networkId = config["id"];
 					fprintf(stderr, "Deleting network %s\n", networkId.c_str());
-					w.exec_params0("DELETE FROM network_memberships_ctl WHERE network_id = $1", networkId);
-					w.exec_params0("DELETE FROM networks_ctl WHERE id = $1", networkId);
+					w.exec("DELETE FROM network_memberships_ctl WHERE network_id = $1", pqxx::params { networkId });
+					w.exec("DELETE FROM networks_ctl WHERE id = $1", pqxx::params { networkId });
 
 					w.commit();
 
@@ -1400,9 +1434,11 @@ void CentralDB::commitThread()
 					std::string memberId = config["id"];
 					std::string networkId = config["nwid"];
 
-					pqxx::result res = w.exec_params0(
-						"DELETE FROM network_memberships_ctl WHERE device_id = $1 AND network_id = $2", memberId,
-						networkId);
+					pqxx::result res =
+						w.exec(
+							 "DELETE FROM network_memberships_ctl WHERE device_id = $1 AND network_id = $2",
+							 pqxx::params { memberId, networkId })
+							.no_rows();
 
 					w.commit();
 
@@ -1507,10 +1543,12 @@ void CentralDB::onlineNotificationThread()
 					//
 					// exec_params1 will throw pqxx::unexpected_rows if not exactly one row is returned.  If that's the
 					// case, skip this record and move on.
-					pqxx::row r = w.exec_params1(
-						"SELECT device_id, network_id FROM network_memberships_ctl WHERE network_id = $1 AND device_id "
-						"= $2",
-						networkId, memberId);
+					pqxx::row r = w.exec(
+									   "SELECT device_id, network_id FROM network_memberships_ctl WHERE network_id = "
+									   "$1 AND device_id "
+									   "= $2",
+									   pqxx::params { networkId, memberId })
+									  .one_row();
 				}
 				catch (pqxx::unexpected_rows& e) {
 					continue;
@@ -1554,20 +1592,22 @@ nlohmann::json CentralDB::_getNetworkMember(pqxx::work& tx, const std::string ne
 	nlohmann::json out;
 
 	try {
-		pqxx::row row = tx.exec_params1(
-			"SELECT nm.device_id, nm.network_id, nm.authorized, nm.active_bridge, nm.ip_assignments, "
-			"nm.no_auto_assign_ips, "
-			"nm.sso_exempt, (EXTRACT(EPOCH FROM nm.authentication_expiry_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"(EXTRACT(EPOCH FROM nm.creation_time AT TIME ZONE 'UTC')*1000)::bigint, nm.identity, "
-			"(EXTRACT(EPOCH FROM nm.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"(EXTRACT(EPOCH FROM nm.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"nm.remote_trace_level, nm.remote_trace_target, nm.revision, nm.capabilities, nm.tags, "
-			"nm.frontend "
-			"FROM network_memberships_ctl nm "
-			"INNER JOIN networks_ctl n "
-			"  ON nm.network_id = n.id "
-			"WHERE nm.network_id = $1 AND nm.device_id = $2",
-			networkID, memberID);
+		pqxx::row row =
+			tx.exec(
+				  "SELECT nm.device_id, nm.network_id, nm.authorized, nm.active_bridge, nm.ip_assignments, "
+				  "nm.no_auto_assign_ips, "
+				  "nm.sso_exempt, (EXTRACT(EPOCH FROM nm.authentication_expiry_time AT TIME ZONE 'UTC')*1000)::bigint, "
+				  "(EXTRACT(EPOCH FROM nm.creation_time AT TIME ZONE 'UTC')*1000)::bigint, nm.identity, "
+				  "(EXTRACT(EPOCH FROM nm.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
+				  "(EXTRACT(EPOCH FROM nm.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
+				  "nm.remote_trace_level, nm.remote_trace_target, nm.revision, nm.capabilities, nm.tags, "
+				  "nm.frontend "
+				  "FROM network_memberships_ctl nm "
+				  "INNER JOIN networks_ctl n "
+				  "  ON nm.network_id = n.id "
+				  "WHERE nm.network_id = $1 AND nm.device_id = $2",
+				  pqxx::params { networkID, memberID })
+				.one_row();
 
 		bool authorized = row[2].as<bool>();
 		std::optional<bool> active_bridge =
@@ -1647,11 +1687,13 @@ nlohmann::json CentralDB::_getNetwork(pqxx::work& tx, const std::string networkI
 		std::optional<uint64_t> revision;
 		std::string frontend;
 
-		pqxx::row row = tx.exec_params1(
-			"SELECT id, name, configuration , (EXTRACT(EPOCH FROM creation_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"(EXTRACT(EPOCH FROM last_modified AT TIME ZONE 'UTC')*1000)::bigint, revision, frontend "
-			"FROM networks_ctl WHERE id = $1",
-			networkID);
+		pqxx::row row = tx.exec(
+							  "SELECT id, name, configuration , (EXTRACT(EPOCH FROM creation_time AT TIME ZONE "
+							  "'UTC')*1000)::bigint, "
+							  "(EXTRACT(EPOCH FROM last_modified AT TIME ZONE 'UTC')*1000)::bigint, revision, frontend "
+							  "FROM networks_ctl WHERE id = $1",
+							  pqxx::params { networkID })
+							.one_row();
 
 		cfg = row[2].as<std::string>();
 		creation_time = row[3].is_null() ? std::optional<uint64_t>() : std::optional<uint64_t>(row[3].as<uint64_t>());
