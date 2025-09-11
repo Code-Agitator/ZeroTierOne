@@ -1,3 +1,7 @@
+/* (c) ZeroTier, Inc.
+ * See LICENSE.txt in nonfree/
+ */
+
 #include "CtlUtil.hpp"
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ

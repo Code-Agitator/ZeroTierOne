@@ -1,15 +1,10 @@
-/*
- * Copyright (c)2019 ZeroTier, Inc.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
  */
-/****/
 
 #include "../node/Constants.hpp"
 
@@ -128,7 +123,7 @@ MacEthernetTap::MacEthernetTap(
 					args[1] = p->ifa_name;
 					args[2] = "destroy";
 					args[3] = (char*)0;
-					const pid_t pid = vfork();
+					const pid_t pid = fork();
 					if (pid == 0) {
 						execv(args[0], const_cast<char**>(args));
 						_exit(-1);
@@ -260,7 +255,7 @@ MacEthernetTap::~MacEthernetTap()
 	args[1] = _dev.c_str();
 	args[2] = "destroy";
 	args[3] = (char*)0;
-	pid0 = vfork();
+	pid0 = fork();
 	if (pid0 == 0) {
 		execv(args[0], const_cast<char**>(args));
 		_exit(-1);
@@ -271,7 +266,7 @@ MacEthernetTap::~MacEthernetTap()
 	args[1] = tmp;
 	// args[2] = "destroy";
 	// args[3] = (char *)0;
-	pid1 = vfork();
+	pid1 = fork();
 	if (pid1 == 0) {
 		execv(args[0], const_cast<char**>(args));
 		_exit(-1);

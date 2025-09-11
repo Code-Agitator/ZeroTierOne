@@ -1,22 +1,16 @@
-/*
- * Copyright (c)2019 ZeroTier, Inc.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
  */
-/****/
 
 #ifndef ZT_TOPOLOGY_HPP
 #define ZT_TOPOLOGY_HPP
 
 #include "../include/ZeroTierOne.h"
 #include "Address.hpp"
-#include "Constants.hpp"
 #include "Hashtable.hpp"
 #include "Identity.hpp"
 #include "InetAddress.hpp"
@@ -26,9 +20,7 @@
 #include "World.hpp"
 
 #include <algorithm>
-#include <stdexcept>
 #include <stdio.h>
-#include <string.h>
 #include <utility>
 #include <vector>
 
@@ -112,9 +104,10 @@ class Topology {
 	/**
 	 * Get the current best upstream peer
 	 *
+	 * @param nwid Network ID or 0 if this is to send something unrelated to a specific network
 	 * @return Upstream or NULL if none available
 	 */
-	SharedPtr<Peer> getUpstreamPeer();
+	SharedPtr<Peer> getUpstreamPeer(const uint64_t nwid);
 
 	/**
 	 * @param id Identity to check
@@ -155,35 +148,7 @@ class Topology {
 	 *
 	 * @param eps Hash table to fill with addresses and their stable endpoints
 	 */
-	inline void getUpstreamsToContact(Hashtable<Address, std::vector<InetAddress> >& eps) const
-	{
-		Mutex::Lock _l(_upstreams_m);
-		for (std::vector<World::Root>::const_iterator i(_planet.roots().begin()); i != _planet.roots().end(); ++i) {
-			if (i->identity != RR->identity) {
-				std::vector<InetAddress>& ips = eps[i->identity.address()];
-				for (std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin()); j != i->stableEndpoints.end(); ++j) {
-					if (std::find(ips.begin(), ips.end(), *j) == ips.end()) {
-						ips.push_back(*j);
-					}
-				}
-			}
-		}
-		for (std::vector<World>::const_iterator m(_moons.begin()); m != _moons.end(); ++m) {
-			for (std::vector<World::Root>::const_iterator i(m->roots().begin()); i != m->roots().end(); ++i) {
-				if (i->identity != RR->identity) {
-					std::vector<InetAddress>& ips = eps[i->identity.address()];
-					for (std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin()); j != i->stableEndpoints.end(); ++j) {
-						if (std::find(ips.begin(), ips.end(), *j) == ips.end()) {
-							ips.push_back(*j);
-						}
-					}
-				}
-			}
-		}
-		for (std::vector<std::pair<uint64_t, Address> >::const_iterator m(_moonSeeds.begin()); m != _moonSeeds.end(); ++m) {
-			eps[m->second];
-		}
-	}
+	void getRootsToContact(Hashtable<Address, std::vector<InetAddress> >& eps) const;
 
 	/**
 	 * @return Vector of active upstream addresses (including roots)

@@ -1,39 +1,25 @@
-/*
- * Copyright (c)2019 ZeroTier, Inc.
- *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+/* (c) ZeroTier, Inc.
+ * See LICENSE.txt in nonfree/
  */
-/****/
 
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <type_traits>
 
 #ifndef _WIN32
 #include <sys/time.h>
 #endif
-#include "../include/ZeroTierOne.h"
-#include "../version.h"
+#include "../../include/ZeroTierOne.h"
 #include "EmbeddedNetworkController.hpp"
 #include "FileDB.hpp"
-#include "LFDB.hpp"
 
 #include <algorithm>
 #include <cctype>
-#include <iomanip>
 #include <map>
 #include <memory>
 #include <sstream>
-#include <stdexcept>
 #include <sys/types.h>
 #include <thread>
 #include <utility>
@@ -44,7 +30,6 @@
 
 #include "../node/CertificateOfMembership.hpp"
 #include "../node/Dictionary.hpp"
-#include "../node/MAC.hpp"
 #include "../node/NetworkConfig.hpp"
 #include "../node/Node.hpp"
 #include "opentelemetry/trace/provider.h"
@@ -626,36 +611,6 @@ void EmbeddedNetworkController::init(const Identity& signingId, Sender* sender)
 	}
 #endif
 
-	std::string lfJSON;
-	OSUtils::readFile((_ztPath + ZT_PATH_SEPARATOR_S "local.conf").c_str(), lfJSON);
-	if (lfJSON.length() > 0) {
-		nlohmann::json lfConfig(OSUtils::jsonParse(lfJSON));
-		nlohmann::json& settings = lfConfig["settings"];
-		if (settings.is_object()) {
-			nlohmann::json& controllerDb = settings["controllerDb"];
-			if (controllerDb.is_object()) {
-				std::string type = controllerDb["type"];
-				if (type == "lf") {
-					std::string lfOwner = controllerDb["owner"];
-					std::string lfHost = controllerDb["host"];
-					int lfPort = controllerDb["port"];
-					bool storeOnlineState = controllerDb["storeOnlineState"];
-					if ((lfOwner.length()) && (lfHost.length()) && (lfPort > 0) && (lfPort < 65536)) {
-						std::size_t pubHdrLoc = lfOwner.find("Public: ");
-						if ((pubHdrLoc > 0) && ((pubHdrLoc + 8) < lfOwner.length())) {
-							std::string lfOwnerPublic = lfOwner.substr(pubHdrLoc + 8);
-							std::size_t pubHdrEnd = lfOwnerPublic.find_first_of("\n\r\t ");
-							if (pubHdrEnd != std::string::npos) {
-								lfOwnerPublic = lfOwnerPublic.substr(0, pubHdrEnd);
-								_db.addDB(std::shared_ptr<DB>(new LFDB(_signingId, _path.c_str(), lfOwner.c_str(), lfOwnerPublic.c_str(), lfHost.c_str(), lfPort, storeOnlineState)));
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
 	_db.waitForReady();
 }
 
@@ -778,6 +733,24 @@ std::string EmbeddedNetworkController::networkUpdateFromPostData(uint64_t networ
 			nv6m["6plane"] = false;
 		}
 		network["v6AssignMode"] = nv6m;
+	}
+
+	if (b.count("relays")) {
+		json nrelays = json::array();
+		char rtmp[64];
+		json& relays = b["relays"];
+		if (relays.is_array()) {
+			for (unsigned long i = 0; i < relays.size(); ++i) {
+				json& relay = relays[i];
+				if (relay.is_string()) {
+					nrelays.push_back(Address(Utils::hexStrToU64(OSUtils::jsonString(relay, "0").c_str()) & 0xffffffffffULL).toString(rtmp));
+				}
+			}
+		}
+		if (nrelays.size() > 0)
+			network["relays"] = nrelays;
+		else
+			network.erase("relays");
 	}
 
 	if (b.count("routes")) {
@@ -1931,6 +1904,7 @@ void EmbeddedNetworkController::_request(uint64_t nwid, const InetAddress& fromA
 	json& v6AssignMode = network["v6AssignMode"];
 	json& ipAssignmentPools = network["ipAssignmentPools"];
 	json& routes = network["routes"];
+	json& relays = network["relays"];
 	json& rules = network["rules"];
 	json& capabilities = network["capabilities"];
 	json& tags = network["tags"];
@@ -2058,6 +2032,15 @@ void EmbeddedNetworkController::_request(uint64_t nwid, const InetAddress& fromA
 						*(reinterpret_cast<InetAddress*>(&(r->via))) = v;
 					++nc->routeCount;
 				}
+			}
+		}
+	}
+
+	if (relays.is_array()) {
+		for (unsigned long i = 0; i < relays.size(); ++i) {
+			Address relay(Address(Utils::hexStrToU64(OSUtils::jsonString(relays[i], "0").c_str()) & 0xffffffffffULL));
+			if (! relay.isReserved()) {
+				nc->addSpecialist(relay, ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_RELAY);
 			}
 		}
 	}
