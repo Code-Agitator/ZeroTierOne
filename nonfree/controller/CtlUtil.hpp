@@ -1,3 +1,7 @@
+/* (c) ZeroTier, Inc.
+ * See LICENSE.txt in nonfree/
+ */
+
 #ifndef ZT_CTLUTIL_HPP
 #define ZT_CTLUTIL_HPP
 

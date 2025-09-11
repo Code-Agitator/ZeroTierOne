@@ -1,15 +1,10 @@
-/*
- * Copyright (c)2013-2020 ZeroTier, Inc.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
  */
-/****/
 
 #ifndef ZT_NODE_HPP
 #define ZT_NODE_HPP
@@ -25,13 +20,10 @@
 #include "NetworkController.hpp"
 #include "Path.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "Salsa20.hpp"
 #include "SelfAwareness.hpp"
 
-#include <map>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <vector>
 
 // Bit mask for "expecting reply" hash
@@ -49,7 +41,7 @@ class World;
  */
 class Node : public NetworkController::Sender {
   public:
-	Node(void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, int64_t now);
+	Node(void* uptr, void* tptr, const struct ZT_Node_Config* config, const struct ZT_Node_Callbacks* callbacks, int64_t now);
 	virtual ~Node();
 
 	// Get rid of alignment warnings on 32-bit Windows and possibly improve performance
@@ -290,12 +282,22 @@ class Node : public NetworkController::Sender {
 
 	inline void setLowBandwidthMode(bool isEnabled)
 	{
-		_lowBandwidthMode = isEnabled;
+		_config.lowBandwidthMode = (int)isEnabled;
+	}
+
+	inline void setEncryptedHelloEnabled(bool isEnabled)
+	{
+		_config.enableEncryptedHello = (int)isEnabled;
 	}
 
 	inline bool lowBandwidthModeEnabled()
 	{
-		return _lowBandwidthMode;
+		return _config.lowBandwidthMode != 0;
+	}
+
+	inline bool encryptedHelloEnabled()
+	{
+		return _config.enableEncryptedHello != 0;
 	}
 
 	void initMultithreading(unsigned int concurrency, bool cpuPinningEnabled);
@@ -305,6 +307,7 @@ class Node : public NetworkController::Sender {
 	RuntimeEnvironment* RR;
 	void* _uPtr;   // _uptr (lower case) is reserved in Visual Studio :P
 	ZT_Node_Callbacks _cb;
+	ZT_Node_Config _config;
 
 	// For tracking packet IDs to filter out OK/ERROR replies to packets we did not send
 	uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];

@@ -1,15 +1,10 @@
-/*
- * Copyright (c)2019 ZeroTier, Inc.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
  */
-/****/
 
 #include "Multicaster.hpp"
 
@@ -186,9 +181,7 @@ void Multicaster::send(void* tPtr, int64_t now, const SharedPtr<Network>& networ
 					outp.append((uint32_t)mg.adi());
 					outp.append((uint16_t)etherType);
 					outp.append(data, len);
-					if (! network->config().disableCompression()) {
-						outp.compress();
-					}
+					outp.compress();
 					outp.armor(bestMulticastReplicator->key(), true, false, bestMulticastReplicator->aesKeysIfSupported(), bestMulticastReplicator->identity());
 					Metrics::pkt_multicast_frame_out++;
 					bestMulticastReplicatorPath->send(RR, tPtr, outp.data(), outp.size(), now);
@@ -232,7 +225,7 @@ void Multicaster::send(void* tPtr, int64_t now, const SharedPtr<Network>& networ
 				RR,
 				now,
 				network->id(),
-				network->config().disableCompression(),
+				false,
 				limit,
 				1,	 // we'll still gather a little from peers to keep multicast list fresh
 				src,
@@ -272,7 +265,7 @@ void Multicaster::send(void* tPtr, int64_t now, const SharedPtr<Network>& networ
 				Address explicitGatherPeers[16];
 				unsigned int numExplicitGatherPeers = 0;
 
-				SharedPtr<Peer> bestRoot(RR->topology->getUpstreamPeer());
+				SharedPtr<Peer> bestRoot(RR->topology->getUpstreamPeer(network->id()));
 				if (bestRoot) {
 					explicitGatherPeers[numExplicitGatherPeers++] = bestRoot->address();
 				}
@@ -300,16 +293,6 @@ void Multicaster::send(void* tPtr, int64_t now, const SharedPtr<Network>& networ
 					}
 				}
 
-				std::vector<Address> anchors(network->config().anchors());
-				for (std::vector<Address>::const_iterator a(anchors.begin()); a != anchors.end(); ++a) {
-					if (*a != RR->identity.address()) {
-						explicitGatherPeers[numExplicitGatherPeers++] = *a;
-						if (numExplicitGatherPeers == 16) {
-							break;
-						}
-					}
-				}
-
 				for (unsigned int k = 0; k < numExplicitGatherPeers; ++k) {
 					const CertificateOfMembership* com = (network) ? ((network->config().com) ? &(network->config().com) : (const CertificateOfMembership*)0) : (const CertificateOfMembership*)0;
 					Packet outp(explicitGatherPeers[k], RR->identity.address(), Packet::VERB_MULTICAST_GATHER);
@@ -322,7 +305,7 @@ void Multicaster::send(void* tPtr, int64_t now, const SharedPtr<Network>& networ
 						com->serialize(outp);
 					}
 					RR->node->expectReplyTo(outp.packetId());
-					RR->sw->send(tPtr, outp, true);
+					RR->sw->send(tPtr, outp, true, network->id(), ZT_QOS_NO_FLOW);
 					Metrics::pkt_multicast_gather_out++;
 				}
 			}
@@ -330,7 +313,7 @@ void Multicaster::send(void* tPtr, int64_t now, const SharedPtr<Network>& networ
 			gs.txQueue.push_back(OutboundMulticast());
 			OutboundMulticast& out = gs.txQueue.back();
 
-			out.init(RR, now, network->id(), network->config().disableCompression(), limit, gatherLimit, src, mg, etherType, data, len);
+			out.init(RR, now, network->id(), false, limit, gatherLimit, src, mg, etherType, data, len);
 
 			if (origin) {
 				out.logAsSent(origin);

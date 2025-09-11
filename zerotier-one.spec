@@ -1,9 +1,9 @@
 Name:           zerotier-one
-Version:        1.14.2
+Version:        1.16.0
 Release:        1%{?dist}
 Summary:        ZeroTier network virtualization service
 
-License:        ZeroTier BUSL 1.1
+License:        MPL 2.0
 URL:            https://www.zerotier.com
 
 # Fedora

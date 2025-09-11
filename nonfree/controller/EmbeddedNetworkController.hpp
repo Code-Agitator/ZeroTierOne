@@ -1,34 +1,18 @@
-/*
- * Copyright (c)2019 ZeroTier, Inc.
- *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+/* (c) ZeroTier, Inc.
+ * See LICENSE.txt in nonfree/
  */
-/****/
 
 #ifndef ZT_SQLITENETWORKCONTROLLER_HPP
 #define ZT_SQLITENETWORKCONTROLLER_HPP
 
-#include "../node/Address.hpp"
-#include "../node/Constants.hpp"
-#include "../node/InetAddress.hpp"
-#include "../node/NetworkController.hpp"
-#include "../node/Utils.hpp"
-#include "../osdep/BlockingQueue.hpp"
-#include "../osdep/OSUtils.hpp"
-#include "../osdep/Thread.hpp"
+#include "../../node/Constants.hpp"
+#include "../../node/InetAddress.hpp"
+#include "../../node/NetworkController.hpp"
+#include "../../osdep/BlockingQueue.hpp"
 #include "DB.hpp"
 #include "DBMirrorSet.hpp"
 
-#include <atomic>
 #include <cpp-httplib/httplib.h>
-#include <list>
-#include <map>
 #include <nlohmann/json.hpp>
 #include <set>
 #include <stdint.h>

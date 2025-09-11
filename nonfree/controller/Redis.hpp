@@ -1,3 +1,7 @@
+/* (c) ZeroTier, Inc.
+ * See LICENSE.txt in nonfree/
+ */
+
 #ifndef ZT_CONTROLLER_REDIS_HPP
 #define ZT_CONTROLLER_REDIS_HPP
 

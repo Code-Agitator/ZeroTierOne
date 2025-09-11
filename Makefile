@@ -33,4 +33,4 @@ drone:
 	drone sign zerotier/ZeroTierOne --save
 
 clang-format:
-	find node osdep service tcp-proxy controller -iname '*.cpp' -o -iname '*.hpp' | xargs clang-format -i
+	find node osdep service tcp-proxy nonfree/controller -iname '*.cpp' -o -iname '*.hpp' | xargs clang-format -i
