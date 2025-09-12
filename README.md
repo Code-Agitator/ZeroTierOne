@@ -11,35 +11,51 @@ All ZeroTier traffic is encrypted end-to-end using secret keys that only you con
 
 Visit [ZeroTier’s site](https://www.zerotier.com/) or [ZeroTier's documentation](https://docs.zerotier.com) for more information and [pre-built binary packages](https://www.zerotier.com/download/). Apps for Android and iOS are available for free in the Google Play and Apple app stores.
 
-## Project Layout
+### Build and Platform Notes
 
-* artwork/: icons, logos, etc.
+To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/`.
 
-* attic/: old stuff and experimental code that we want to keep around for reference.
+ - **Mac**
+   - Xcode command line tools for macOS 10.13 or newer are required.
+   - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
+ - **Linux**
+   - The minimum compiler versions required are GCC/G++ 8.x or CLANG/CLANG++ 5.x.
+   - Linux makefiles automatically detect and prefer clang/clang++ if present as it produces smaller and slightly faster binaries in most cases. You can override by supplying CC and CXX variables on the make command line.
+   - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
+ - **Windows**
+   - Visual Studio 2022 on Windows 10 or newer.
+   - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
+ - **FreeBSD**
+   - GNU make is required. Type `gmake` to build.
+   - `binutils` is required.  Type `pkg install binutils` to install.
+   - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
+ - **OpenBSD**
+   - There is a limit of four network memberships on OpenBSD as there are only four tap devices (`/dev/tap0` through `/dev/tap3`).
+   - GNU make is required. Type `gmake` to build.
+   - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
 
-* controller/: the reference network controller implementation, which is built and included by default on desktop and server build targets.
+Typing `make selftest` will build a *zerotier-selftest* binary which unit tests various internals and reports on a few aspects of the build environment. It's a good idea to try this on novel platforms or architectures.
 
-* debian/: files for building Debian packages on Linux.
+### Running
 
-* doc/: manual pages and other documentation.
+Running *zerotier-one* with `-h` option will show help.
 
-* ext/: third party libraries, binaries that we ship for convenience on some platforms (Mac and Windows), and installation support files.
+On Linux and BSD, if you built from source, you can start the service with:
 
-* include/: include files for the ZeroTier core.
+    sudo ./zerotier-one -d
 
-* java/: a JNI wrapper used with our Android mobile app.
+On most distributions, macOS, and Windows, the installer will start the service and set it up to start on boot.
 
-* node/: the ZeroTier virtual Ethernet switch core. Note: do not use C++11 features in here, since we want this to build on old embedded platforms.
+A home folder for your system will automatically be created.
 
-* osdep/: code to support and integrate with OSes, including platform-specific stuff only built for certain targets.
+The service is controlled via the JSON API, which by default is available at `127.0.0.1:9993`. It also listens on `0.0.0.0:9993` which is only usable if `allowManagementFrom` is properly configured in `local.conf`. We include a *zerotier-cli* command line utility to make API calls for standard things like joining and leaving networks. The *authtoken.secret* file in the home folder contains the secret token for accessing this API. See [service/README.md](service/README.md) for API documentation.
 
-* rule-compiler/: JavaScript rules language compiler for defining network-level rules.
+Here's where home folders live (by default) on each OS:
 
-* service/: the ZeroTier One service, which wraps the ZeroTier core and provides VPN-like connectivity to virtual networks.
-
-* windows/: Visual Studio solution files, Windows service code, and the Windows task bar app UI.
-
-* zeroidc/: OIDC implementation used by ZeroTier service to log into SSO-enabled networks. (Written in Rust)
+ * **Linux**: `/var/lib/zerotier-one`
+ * **FreeBSD** / **OpenBSD**: `/var/db/zerotier-one`
+ * **Mac**: `/Library/Application Support/ZeroTier/One`
+ * **Windows**: `\ProgramData\ZeroTier\One` (That's the default. The base 'shared app data' folder might be different if Windows is installed with a non-standard drive letter assignment or layout.)
 
 ## License
 
