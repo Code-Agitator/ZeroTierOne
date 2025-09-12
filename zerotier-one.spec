@@ -107,7 +107,7 @@ rm -f %{name}-%{version}
 
 %build
 %if "%{?dist}" != ".el6"
-make ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one
+make ZT_USE_MINIUPNPC=1 %{?_smp_mflags} ZT_OFFICIAL=1 ZT_NONFREE=1 one
 %endif
 
 %pre
