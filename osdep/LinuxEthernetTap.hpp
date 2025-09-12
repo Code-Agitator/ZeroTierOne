@@ -1,15 +1,10 @@
-/*
- * Copyright (c)2019 ZeroTier, Inc.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
  */
-/****/
 
 #ifndef ZT_LINUXETHERNETTAP_HPP
 #define ZT_LINUXETHERNETTAP_HPP
@@ -59,6 +54,7 @@ class LinuxEthernetTap : public EthernetTap {
 	virtual void setMtu(unsigned int mtu);
 	virtual void setDns(const char* domain, const std::vector<InetAddress>& servers)
 	{
+		fprintf(stderr, "WARNING: ignoring call to LinuxEthernetTap::setDns on Linux. This is not implemented yet. See https://github.com/zerotier/ZeroTierOne/issues/2492 for details" ZT_EOL_S);
 	}
 
   private:

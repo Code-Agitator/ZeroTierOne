@@ -1,22 +1,14 @@
-/*
- * Copyright (c)2013-2020 ZeroTier, Inc.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
  */
-/****/
 
 #include <algorithm>
-#include <condition_variable>
 #include <exception>
-#include <list>
 #include <map>
-#include <mutex>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,24 +30,17 @@
 #include "../node/MAC.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Node.hpp"
-#include "../node/PacketMultiplexer.hpp"
 #include "../node/Peer.hpp"
-#include "../node/Poly1305.hpp"
-#include "../node/SHA512.hpp"
-#include "../node/Salsa20.hpp"
 #include "../node/Utils.hpp"
 #include "../node/World.hpp"
 #include "../osdep/Binder.hpp"
 #include "../osdep/BlockingQueue.hpp"
-#include "../osdep/ExtOsdep.hpp"
-#include "../osdep/Http.hpp"
 #include "../osdep/ManagedRoute.hpp"
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Phy.hpp"
 #include "../osdep/PortMapper.hpp"
 #include "../version.h"
 #include "OneService.hpp"
-#include "SoftwareUpdater.hpp"
 
 #include <cpp-httplib/httplib.h>
 
@@ -86,8 +71,8 @@ namespace sdkmetrics = opentelemetry::v1::sdk::metrics;
 namespace sdklogs = opentelemetry::v1::sdk::logs;
 namespace sdkresource = opentelemetry::v1::sdk::resource;
 #else
-#include "opentelemetry/logs/logger.h"
-#include "opentelemetry/metrics/provider.h"
+// #include "opentelemetry/logs/logger.h"
+// #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/trace/provider.h"
 #endif
 
@@ -138,9 +123,9 @@ extern "C" {
 
 using json = nlohmann::json;
 
-#include "../controller/EmbeddedNetworkController.hpp"
-#include "../controller/PostgreSQL.hpp"
-#include "../controller/Redis.hpp"
+#include "../nonfree/controller/EmbeddedNetworkController.hpp"
+#include "../nonfree/controller/PostgreSQL.hpp"
+#include "../nonfree/controller/Redis.hpp"
 #include "../osdep/EthernetTap.hpp"
 #ifdef __WINDOWS__
 #include "../osdep/WindowsEthernetTap.hpp"
@@ -694,6 +679,7 @@ static void _peerToJson(nlohmann::json& pj, const ZT_Peer* peer, SharedPtr<Bond>
 	if (bond && peer->isBonded) {
 		pj["bondingPolicyCode"] = peer->bondingPolicy;
 		pj["bondingPolicyStr"] = Bond::getPolicyStrByCode(peer->bondingPolicy);
+		pj["linkSelectMethod"] = bond->getLinkSelectMethod();
 		pj["numAliveLinks"] = peer->numAliveLinks;
 		pj["numTotalLinks"] = peer->numTotalLinks;
 		pj["failoverInterval"] = bond->getFailoverInterval();
@@ -841,7 +827,6 @@ class OneServiceImpl : public OneService {
 	EmbeddedNetworkController* _controller;
 	Phy<OneServiceImpl*> _phy;
 	Node* _node;
-	SoftwareUpdater* _updater;
 	bool _updateAutoApply;
 
 	httplib::Server _controlPlane;
@@ -961,7 +946,6 @@ class OneServiceImpl : public OneService {
 		, _controller((EmbeddedNetworkController*)0)
 		, _phy(this, false, true)
 		, _node((Node*)0)
-		, _updater((SoftwareUpdater*)0)
 		, _updateAutoApply(false)
 		, _controlPlane()
 		, _controlPlaneV6()
@@ -1175,7 +1159,11 @@ class OneServiceImpl : public OneService {
 				cb.eventCallback = SnodeEventCallback;
 				cb.pathCheckFunction = SnodePathCheckFunction;
 				cb.pathLookupFunction = SnodePathLookupFunction;
-				_node = new Node(this, (void*)0, &cb, OSUtils::now());
+				// These settings can get set later when local.conf is checked.
+				struct ZT_Node_Config config;
+				config.enableEncryptedHello = 0;
+				config.lowBandwidthMode = 0;
+				_node = new Node(this, (void*)0, &config, &cb, OSUtils::now());
 			}
 
 			// local.conf
@@ -1271,11 +1259,13 @@ class OneServiceImpl : public OneService {
 			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
 
 			// Network controller is now enabled by default for desktop and server
+#ifdef ZT_NONFREE_CONTROLLER
 			_controller = new EmbeddedNetworkController(_node, _homePath.c_str(), _controllerDbPath.c_str(), _ports[0], _rc);
 			if (! _ssoRedirectURL.empty()) {
 				_controller->setSSORedirectURL(_ssoRedirectURL);
 			}
 			_node->setNetconfMaster((void*)_controller);
+#endif
 
 			startHTTPControlPlane();
 
@@ -1305,7 +1295,6 @@ class OneServiceImpl : public OneService {
 			_lastRestart = clockShouldBe;
 			int64_t lastTapMulticastGroupCheck = 0;
 			int64_t lastBindRefresh = 0;
-			int64_t lastUpdateCheck = clockShouldBe;
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalConfFileCheck = OSUtils::now();
 			int64_t lastOnline = lastLocalConfFileCheck;
@@ -1330,13 +1319,6 @@ class OneServiceImpl : public OneService {
 				if ((now > clockShouldBe) && ((now - clockShouldBe) > 10000)) {
 					_lastRestart = now;
 					restarted = true;
-				}
-
-				// Check for updates (if enabled)
-				if ((_updater) && ((now - lastUpdateCheck) > 10000)) {
-					lastUpdateCheck = now;
-					if (_updater->check(now) && _updateAutoApply)
-						_updater->apply();
 				}
 
 				// Reload local.conf if anything changed recently
@@ -1522,8 +1504,6 @@ class OneServiceImpl : public OneService {
 			_nets.clear();
 		}
 
-		delete _updater;
-		_updater = (SoftwareUpdater*)0;
 		delete _node;
 		_node = (Node*)0;
 
@@ -1791,7 +1771,7 @@ class OneServiceImpl : public OneService {
 		if (_enableWebServer) {
 			static std::string appUiPath = "/app";
 			static char appUiDir[16384];
-			sprintf(appUiDir, "%s%s", _homePath.c_str(), appUiPath.c_str());
+			snprintf(appUiDir, sizeof(appUiDir), "%s%s", _homePath.c_str(), appUiPath.c_str());
 
 			auto ret = _controlPlane.set_mount_point(appUiPath, appUiDir);
 			_controlPlaneV6.set_mount_point(appUiPath, appUiDir);
@@ -1818,7 +1798,7 @@ class OneServiceImpl : public OneService {
 					if (match.matched) {
 						// fallback
 						char indexHtmlPath[16384];
-						sprintf(indexHtmlPath, "%s/%s/%s", appUiDir, match.str().c_str(), "index.html");
+						snprintf(indexHtmlPath, sizeof(indexHtmlPath), "%s/%s/%s", appUiDir, match.str().c_str(), "index.html");
 						// fprintf(stderr, "fallback path %s\n", indexHtmlPath);
 
 						std::string indexHtml;
@@ -1842,7 +1822,7 @@ class OneServiceImpl : public OneService {
 					// add .html
 					std::string htmlFile;
 					char htmlPath[16384];
-					sprintf(htmlPath, "%s%s%s", appUiDir, (req.path).substr(appUiPath.length()).c_str(), ".html");
+					snprintf(htmlPath, sizeof(htmlPath), "%s%s%s", appUiDir, (req.path).substr(appUiPath.length()).c_str(), ".html");
 					// fprintf(stderr, "path: %s\n", htmlPath);
 					if (OSUtils::readFile(htmlPath, htmlFile)) {
 						res.set_content(htmlFile.c_str(), "text/html");
@@ -2494,10 +2474,6 @@ class OneServiceImpl : public OneService {
 #else
 			settings["portMappingEnabled"] = false;	  // not supported in build
 #endif
-#ifndef ZT_SDK
-			settings["softwareUpdate"] = OSUtils::jsonString(settings["softwareUpdate"], ZT_SOFTWARE_UPDATE_DEFAULT);
-			settings["softwareUpdateChannel"] = OSUtils::jsonString(settings["softwareUpdateChannel"], ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL);
-#endif
 			const World planet(_node->planet());
 			out["planetWorldId"] = planet.id();
 			out["planetWorldTimestamp"] = planet.timestamp();
@@ -2622,9 +2598,11 @@ class OneServiceImpl : public OneService {
 		_controlPlane.set_exception_handler(exceptionHandler);
 		_controlPlaneV6.set_exception_handler(exceptionHandler);
 
+#ifdef ZT_NONFREE_CONTROLLER
 		if (_controller) {
 			_controller->configureHTTPControlPlane(_controlPlane, _controlPlaneV6, setContent);
 		}
+#endif
 
 #ifndef ZT_EXTOSDEP
 		_controlPlane.set_pre_routing_handler(authCheck);
@@ -2851,13 +2829,14 @@ class OneServiceImpl : public OneService {
 				std::string linkSelectMethodStr;
 				if (customPolicy.contains("linkSelectMethod")) {
 					linkSelectMethodStr = OSUtils::jsonString(customPolicy["linkSelectMethod"], "always");
-				} else {
+				}
+				else {
 					linkSelectMethodStr = OSUtils::jsonString(customPolicy["activeReselect"], "always");
 					if (customPolicy.contains("activeReselect")) {
 						fprintf(stderr, "warning: 'activeReselect' is deprecated, please use 'linkSelectMethod' instead in policy '%s'\n", customPolicyStr.c_str());
 					}
 				}
-				
+
 				if (linkSelectMethodStr == "always") {
 					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_ALWAYS);
 				}
@@ -2909,6 +2888,7 @@ class OneServiceImpl : public OneService {
 			fprintf(stderr, "WARNING: using manually-specified secondary and/or tertiary ports. This can cause NAT issues." ZT_EOL_S);
 		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"], true);
+		_node->setEncryptedHelloEnabled(OSUtils::jsonBool(settings["encryptedHelloEnabled"], false));
 		_node->setLowBandwidthMode(OSUtils::jsonBool(settings["lowBandwidthMode"], false));
 #if defined(__LINUX__) || defined(__FreeBSD__)
 		_multicoreEnabled = OSUtils::jsonBool(settings["multicoreEnabled"], false);
@@ -2932,23 +2912,6 @@ class OneServiceImpl : public OneService {
 		_multicoreEnabled = false;
 		_concurrency = 1;
 		_cpuPinningEnabled = false;
-#endif
-
-#ifndef ZT_SDK
-		const std::string up(OSUtils::jsonString(settings["softwareUpdate"], ZT_SOFTWARE_UPDATE_DEFAULT));
-		const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"], false);
-		if (((up == "apply") || (up == "download")) || (udist)) {
-			if (! _updater)
-				_updater = new SoftwareUpdater(*_node, _homePath);
-			_updateAutoApply = (up == "apply");
-			_updater->setUpdateDistribution(udist);
-			_updater->setChannel(OSUtils::jsonString(settings["softwareUpdateChannel"], ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL));
-		}
-		else {
-			delete _updater;
-			_updater = (SoftwareUpdater*)0;
-			_updateAutoApply = false;
-		}
 #endif
 
 		json& ignoreIfs = settings["interfacePrefixBlacklist"];
@@ -3689,17 +3652,12 @@ class OneServiceImpl : public OneService {
 				}
 			} break;
 
-			case ZT_EVENT_USER_MESSAGE: {
-				const ZT_UserMessage* um = reinterpret_cast<const ZT_UserMessage*>(metaData);
-				if ((um->typeId == ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE) && (_updater)) {
-					_updater->handleSoftwareUpdateUserMessage(um->origin, um->data, um->length);
-				}
-			} break;
-
 			case ZT_EVENT_REMOTE_TRACE: {
+#ifdef ZT_NONFREE_CONTROLLER
 				const ZT_RemoteTrace* rt = reinterpret_cast<const ZT_RemoteTrace*>(metaData);
 				if ((rt) && (rt->len > 0) && (rt->len <= ZT_MAX_REMOTE_TRACE_SIZE) && (rt->data))
 					_controller->handleRemoteTrace(*rt);
+#endif
 			}
 
 			default:

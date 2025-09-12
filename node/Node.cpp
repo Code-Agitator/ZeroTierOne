@@ -1,21 +1,15 @@
-/*
- * Copyright (c)2013-2020 ZeroTier, Inc.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file in the project's root directory.
- *
- * Change Date: 2026-01-01
- *
- * On the date above, in accordance with the Business Source License, use
- * of this software will be governed by version 2.0 of the Apache License.
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
  */
-/****/
 
 #include "Node.hpp"
 
 #include "../version.h"
 #include "Address.hpp"
-#include "Buffer.hpp"
 #include "Constants.hpp"
 #include "ECC.hpp"
 #include "Identity.hpp"
@@ -49,7 +43,7 @@ namespace ZeroTier {
 /* Public Node interface (C++, exposed via CAPI bindings)                   */
 /****************************************************************************/
 
-Node::Node(void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, int64_t now)
+Node::Node(void* uptr, void* tptr, const struct ZT_Node_Config* config, const struct ZT_Node_Callbacks* callbacks, int64_t now)
 	: _RR(this)
 	, RR(&_RR)
 	, _uPtr(uptr)
@@ -65,6 +59,7 @@ Node::Node(void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, in
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
 	}
 	memcpy(&_cb, callbacks, sizeof(ZT_Node_Callbacks));
+	memcpy(&_config, config, sizeof(ZT_Node_Config));
 
 	// Initialize non-cryptographic PRNG from a good random source
 	Utils::getSecureRandom((void*)_prngState, sizeof(_prngState));
@@ -184,6 +179,7 @@ Node::~Node()
 		Mutex::Lock _l(_networks_m);
 		_networks.clear();	 // destroy all networks before shutdown
 	}
+	// Explicitly call destructors then free memory for all other objects.
 	if (RR->sa) {
 		RR->sa->~SelfAwareness();
 	}
@@ -251,7 +247,7 @@ class _PingPeersThatNeedPing {
 		, _tPtr(tPtr)
 		, _alwaysContact(alwaysContact)
 		, _now(now)
-		, _bestCurrentUpstream(RR->topology->getUpstreamPeer())
+		, _bestCurrentUpstream(RR->topology->getUpstreamPeer(0))
 	{
 	}
 
@@ -340,9 +336,9 @@ ZT_ResultCode Node::processBackgroundTasks(void* tptr, int64_t now, volatile int
 		try {
 			_lastPingCheck = now;
 
-			// Get designated VL1 upstreams
+			// Get designated VL1 upstreams (roots)
 			Hashtable<Address, std::vector<InetAddress> > alwaysContact;
-			RR->topology->getUpstreamsToContact(alwaysContact);
+			RR->topology->getRootsToContact(alwaysContact);
 
 			// Uncomment to dump stats
 			/*
@@ -699,7 +695,7 @@ int Node::sendUserMessage(void* tptr, uint64_t dest, uint64_t typeId, const void
 			outp.append(typeId);
 			outp.append(data, len);
 			outp.compress();
-			RR->sw->send(tptr, outp, true);
+			RR->sw->send(tptr, outp, true, 0, ZT_QOS_NO_FLOW);
 			return 1;
 		}
 	}
@@ -825,7 +821,7 @@ void Node::ncSendConfig(uint64_t nwid, uint64_t requestPacketId, const Address& 
 					outp.append(sig.data, ZT_ECC_SIGNATURE_LEN);
 
 					outp.compress();
-					RR->sw->send((void*)0, outp, true);
+					RR->sw->send((void*)0, outp, true, nwid, ZT_QOS_NO_FLOW);
 					chunkIndex += chunkLen;
 				}
 			}
@@ -855,7 +851,7 @@ void Node::ncSendRevocation(const Address& destination, const Revocation& rev)
 		outp.append((uint16_t)1);
 		rev.serialize(outp);
 		outp.append((uint16_t)0);
-		RR->sw->send((void*)0, outp, true);
+		RR->sw->send((void*)0, outp, true, rev.networkId(), ZT_QOS_NO_FLOW);
 	}
 }
 
@@ -911,7 +907,7 @@ void Node::ncSendError(uint64_t nwid, uint64_t requestPacketId, const Address& d
 			outp.append(errorData, errorDataSize);
 		}
 
-		RR->sw->send((void*)0, outp, true);
+		RR->sw->send((void*)0, outp, true, nwid, ZT_QOS_NO_FLOW);
 	}	// else we can't send an ERROR() in response to nothing, so discard
 }
 
@@ -923,11 +919,11 @@ void Node::ncSendError(uint64_t nwid, uint64_t requestPacketId, const Address& d
 
 extern "C" {
 
-enum ZT_ResultCode ZT_Node_new(ZT_Node** node, void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, int64_t now)
+enum ZT_ResultCode ZT_Node_new(ZT_Node** node, const struct ZT_Node_Config* config, void* uptr, void* tptr, const struct ZT_Node_Callbacks* callbacks, int64_t now)
 {
 	*node = (ZT_Node*)0;
 	try {
-		*node = reinterpret_cast<ZT_Node*>(new ZeroTier::Node(uptr, tptr, callbacks, now));
+		*node = reinterpret_cast<ZT_Node*>(new ZeroTier::Node(uptr, tptr, config, callbacks, now));
 		return ZT_RESULT_OK;
 	}
 	catch (std::bad_alloc& exc) {

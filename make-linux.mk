@@ -16,6 +16,16 @@ DESTDIR?=
 EXTRA_DEPS?=
 
 include objects.mk
+
+ifeq ($(ZT_CONTROLLER),1)
+	ZT_NONFREE=1
+endif
+ifeq ($(ZT_NONFREE),1)
+	include objects-nonfree.mk
+	ONE_OBJS+=$(CONTROLLER_OBJS)
+	override DEFS += -DZT_NONFREE_CONTROLLER
+endif
+
 ifeq ($(ZT_EXTOSDEP),1)
 	ONE_OBJS+=osdep/ExtOsdep.o
 	override DEFS += -DZT_EXTOSDEP
@@ -56,7 +66,7 @@ ifeq ($(ZT_RULES_ENGINE_DEBUGGING),1)
 endif
 
 ifeq ($(ZT_DEBUG_TRACE),1)
-	DEFS+=-DZT_DEBUG_TRACE
+	override DEFS+=-DZT_DEBUG_TRACE
 endif
 
 # Build with address sanitization library for advanced debugging (clang)
@@ -94,10 +104,6 @@ ifeq ($(ZT_SYNOLOGY), 1)
 	ZT_EMBEDDED=1
 endif
 
-ifeq ($(ZT_DISABLE_COMPRESSION), 1)
-	override DEFS+=-DZT_DISABLE_COMPRESSION
-endif
-
 ifeq ($(ZT_TRACE),1)
 	override DEFS+=-DZT_TRACE
 endif
@@ -115,7 +121,7 @@ ifeq ($(ZT_VAULT_SUPPORT),1)
 	override LDLIBS+=-lcurl
 endif
 
-# Determine system build architecture from compiler target
+# Determine system build architecture from compiler target. This is hairy due to "ARM wrestling."
 CC_MACH=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 ZT_ARCHITECTURE=999
 ifeq ($(CC_MACH),x86_64)
@@ -440,14 +446,14 @@ endif
 ext/${OTEL_INSTALL_DIR}/include/opentelemetry/version.h: otel
 
 clean: FORCE
-	rm -rf *.a *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules ext/misc/*.o debian/.debhelper debian/debhelper-build-stamp docker/zerotier-one rustybits/target ext/opentelemetry-cpp-${OTEL_VERSION}/localinstall ext/opentelemetry-cpp-${OTEL_VERSION}/build
+	rm -rf *.a *.so *.o node/*.o nonfree/controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules ext/misc/*.o debian/.debhelper debian/debhelper-build-stamp docker/zerotier-one rustybits/target ext/opentelemetry-cpp-${OTEL_VERSION}/localinstall ext/opentelemetry-cpp-${OTEL_VERSION}/build
 
 distclean:	clean
 
 realclean:	distclean
 
 official:	FORCE
-	make -j`nproc` ZT_OFFICIAL=1 all
+	make -j`nproc` ZT_OFFICIAL=1 ZT_NONFREE=1 all
 
 docker:	FORCE
 	docker build --no-cache -f ext/installfiles/linux/zerotier-containerized/Dockerfile -t zerotier-containerized .
