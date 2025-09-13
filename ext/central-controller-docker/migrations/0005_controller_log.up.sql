@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS controller_log (
-	controller_id CHAR(10) NOT NULL REFERENCES ztc_controller(id) ON DELETE CASCADE,
+	controller_id CHAR(10) NOT NULL REFERENCES controllers_ctl(id) ON DELETE CASCADE,
 	check_time TIMESTAMP WITH TIME ZONE NOT NULL,
 	load_factor REAL,
 	PRIMARY KEY (controller_id, check_time)
