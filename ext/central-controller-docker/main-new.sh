@@ -95,8 +95,17 @@ if [ "$ZT_USE_PUBSUB" == "true" ]; then
         exit 1
     fi
 
+    if [ -z "$ZT_PUBSUB_MEMBER_CHANGE_RECV_TOPIC" ] || [ -z "$ZT_PUBSUB_MEMBER_CHANGE_SEND_TOPIC" ] || [ -z "$ZT_PUBSUB_NETWORK_CHANGE_RECV_TOPIC" ] || [ -z "$ZT_PUBSUB_NETWORK_CHANGE_SEND_TOPIC" ]; then
+        echo '*** FAILED: ZT_PUBSUB_MEMBER_CHANGE_RECV_TOPIC, ZT_PUBSUB_MEMBER_CHANGE_SEND_TOPIC, ZT_PUBSUB_NETWORK_CHANGE_RECV_TOPIC, and ZT_PUBSUB_NETWORK_CHANGE_SEND_TOPIC environment variables must all be defined to use PubSub as a controller backend'
+        exit 1
+    fi
+
     PUBSUB_CONF=", \"pubsub\": {
-        \"project_id\": \"${ZT_PUBSUB_PROJECT}\"
+        \"project_id\": \"${ZT_PUBSUB_PROJECT}\",
+        \"member_change_recv_topic\": \"${ZT_PUBSUB_MEMBER_CHANGE_RECV_TOPIC}\",
+        \"member_change_send_topic\": \"${ZT_PUBSUB_MEMBER_CHANGE_SEND_TOPIC}\",
+        \"network_change_recv_topic\": \"${ZT_PUBSUB_NETWORK_CHANGE_RECV_TOPIC}\",
+        \"network_change_send_topic\": \"${ZT_PUBSUB_NETWORK_CHANGE_SEND_TOPIC}\"
     }
 "
 fi

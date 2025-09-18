@@ -13,9 +13,13 @@ class PubSubWriter {
 	PubSubWriter(std::string project, std::string topic, std::string controller_id);
 	virtual ~PubSubWriter();
 
-	bool publishNetworkChange(const nlohmann::json& oldNetwork, const nlohmann::json& newNetwork);
+	bool publishNetworkChange(
+		const nlohmann::json& oldNetwork,
+		const nlohmann::json& newNetwork,
+		const std::string& frontend);
 
-	bool publishMemberChange(const nlohmann::json& oldMember, const nlohmann::json& newMember);
+	bool
+	publishMemberChange(const nlohmann::json& oldMember, const nlohmann::json& newMember, const std::string& frontend);
 
 	bool publishStatusChange(
 		std::string frontend,
@@ -27,7 +31,7 @@ class PubSubWriter {
 		int64_t last_seen);
 
   protected:
-	bool publishMessage(const std::string& payload);
+	bool publishMessage(const std::string& payload, const std::string& frontend);
 
   private:
 	std::string _controller_id;

@@ -165,11 +165,13 @@ CentralDB::CentralDB(
 		case LISTENER_MODE_PUBSUB:
 			fprintf(stderr, "Using PubSub for change listeners\n");
 			if (cc->pubSubConfig != NULL) {
-				_membersDbWatcher =
-					std::make_shared<PubSubMemberListener>(_myAddressStr, cc->pubSubConfig->project_id, this);
-				_networksDbWatcher =
-					std::make_shared<PubSubNetworkListener>(_myAddressStr, cc->pubSubConfig->project_id, this);
-				_changeNotifier = std::make_shared<PubSubChangeNotifier>(_myAddressStr, cc->pubSubConfig->project_id);
+				_membersDbWatcher = std::make_shared<PubSubMemberListener>(
+					_myAddressStr, cc->pubSubConfig->project_id, cc->pubSubConfig->member_change_recv_topic, this);
+				_networksDbWatcher = std::make_shared<PubSubNetworkListener>(
+					_myAddressStr, cc->pubSubConfig->project_id, cc->pubSubConfig->network_change_recv_topic, this);
+				_changeNotifier = std::make_shared<PubSubChangeNotifier>(
+					_myAddressStr, cc->pubSubConfig->project_id, cc->pubSubConfig->member_change_send_topic,
+					cc->pubSubConfig->network_change_send_topic);
 			}
 			else {
 				throw std::runtime_error(

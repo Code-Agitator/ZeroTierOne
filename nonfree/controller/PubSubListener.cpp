@@ -121,8 +121,8 @@ void PubSubListener::subscribe()
 	}
 }
 
-PubSubNetworkListener::PubSubNetworkListener(std::string controller_id, std::string project, DB* db)
-	: PubSubListener(controller_id, project, "controller-network-change-stream")
+PubSubNetworkListener::PubSubNetworkListener(std::string controller_id, std::string project, std::string topic, DB* db)
+	: PubSubListener(controller_id, project, topic)
 	, _db(db)
 {
 }
@@ -199,8 +199,8 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 	}
 }
 
-PubSubMemberListener::PubSubMemberListener(std::string controller_id, std::string project, DB* db)
-	: PubSubListener(controller_id, project, "controller-member-change-stream")
+PubSubMemberListener::PubSubMemberListener(std::string controller_id, std::string project, std::string topic, DB* db)
+	: PubSubListener(controller_id, project, topic)
 	, _db(db)
 {
 }

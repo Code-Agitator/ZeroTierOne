@@ -9,6 +9,10 @@ namespace ZeroTier {
 
 struct PubSubConfig {
 	std::string project_id;
+	std::string member_change_recv_topic;
+	std::string member_change_send_topic;
+	std::string network_change_recv_topic;
+	std::string network_change_send_topic;
 };
 
 struct BigTableConfig {

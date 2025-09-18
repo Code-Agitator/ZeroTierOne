@@ -51,10 +51,14 @@ PubSubWriter::~PubSubWriter()
 {
 }
 
-bool PubSubWriter::publishMessage(const std::string& payload)
+bool PubSubWriter::publishMessage(const std::string& payload, const std::string& frontend)
 {
 	std::vector<std::pair<std::string, std::string> > attributes;
 	attributes.emplace_back("controller_id", _controller_id);
+
+	if (! frontend.empty()) {
+		attributes.emplace_back("frontend", frontend);
+	}
 
 	auto msg = pubsub::MessageBuilder {}.SetData(payload).SetAttributes(attributes).Build();
 	auto message_id = _publisher->Publish(std::move(msg)).get();
@@ -67,7 +71,10 @@ bool PubSubWriter::publishMessage(const std::string& payload)
 	return true;
 }
 
-bool PubSubWriter::publishNetworkChange(const nlohmann::json& oldNetwork, const nlohmann::json& newNetwork)
+bool PubSubWriter::publishNetworkChange(
+	const nlohmann::json& oldNetwork,
+	const nlohmann::json& newNetwork,
+	const std::string& frontend)
 {
 	pbmessages::NetworkChange nc = networkChangeFromJson(_controller_id, oldNetwork, newNetwork);
 	std::string payload;
@@ -76,10 +83,13 @@ bool PubSubWriter::publishNetworkChange(const nlohmann::json& oldNetwork, const 
 		return false;
 	}
 
-	return publishMessage(payload);
+	return publishMessage(payload, frontend);
 }
 
-bool PubSubWriter::publishMemberChange(const nlohmann::json& oldMember, const nlohmann::json& newMember)
+bool PubSubWriter::publishMemberChange(
+	const nlohmann::json& oldMember,
+	const nlohmann::json& newMember,
+	const std::string& frontend)
 {
 	pbmessages::MemberChange mc = memberChangeFromJson(_controller_id, oldMember, newMember);
 	std::string payload;
@@ -88,7 +98,7 @@ bool PubSubWriter::publishMemberChange(const nlohmann::json& oldMember, const nl
 		return false;
 	}
 
-	return publishMessage(payload);
+	return publishMessage(payload, frontend);
 }
 
 bool PubSubWriter::publishStatusChange(
@@ -124,7 +134,7 @@ bool PubSubWriter::publishStatusChange(
 		return false;
 	}
 
-	return publishMessage(payload);
+	return publishMessage(payload, "");
 }
 
 pbmessages::NetworkChange_Network* networkFromJson(const nlohmann::json& j)

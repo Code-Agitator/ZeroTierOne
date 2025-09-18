@@ -26,7 +26,11 @@ class ControllerChangeNotifier {
 
 class PubSubChangeNotifier : public ControllerChangeNotifier {
   public:
-	PubSubChangeNotifier(std::string controllerID, std::string project);
+	PubSubChangeNotifier(
+		std::string controllerID,
+		std::string project,
+		std::string memberChangeTopic,
+		std::string networkChangeTopic);
 	virtual ~PubSubChangeNotifier();
 
 	virtual void notifyNetworkChange(
@@ -40,11 +44,8 @@ class PubSubChangeNotifier : public ControllerChangeNotifier {
 		const std::string& frontend = "") override;
 
   private:
-	std::shared_ptr<PubSubWriter> _cv1networkChangeWriter;
-	std::shared_ptr<PubSubWriter> _cv1memberChangeWriter;
-
-	std::shared_ptr<PubSubWriter> _cv2networkChangeWriter;
-	std::shared_ptr<PubSubWriter> _cv2memberChangeWriter;
+	std::shared_ptr<PubSubWriter> _networkChangeWriter;
+	std::shared_ptr<PubSubWriter> _memberChangeWriter;
 };
 
 }	// namespace ZeroTier
