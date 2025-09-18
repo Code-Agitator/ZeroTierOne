@@ -102,12 +102,12 @@ ln -s %{getenv:PWD} %{name}-%{version}
 mkdir -p SOURCES
 tar --exclude=%{name}-%{version}/.git --exclude=%{name}-%{version}/%{name}-%{version} -czf SOURCES/%{name}-%{version}.tar.gz %{name}-%{version}/*
 rm -f %{name}-%{version}
-# cp -a %{getenv:PWD}/* .
+cp -a %{getenv:PWD}/* .
 %endif
 
 %build
 %if "%{?dist}" != ".el6"
-make ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one
+make ZT_USE_MINIUPNPC=1 %{?_smp_mflags} ZT_OFFICIAL=1 ZT_NONFREE=1 one
 %endif
 
 %pre

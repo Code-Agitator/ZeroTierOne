@@ -341,10 +341,10 @@ ifeq ($(ZT_STATIC),1)
 endif
 
 # For building an official semi-static binary on CentOS 7
-ifeq ($(ZT_OFFICIAL),1)
-	CORE_OBJS+=ext/misc/linux-old-glibc-compat.o
-	override LDFLAGS+=-Wl,--wrap=memcpy -static-libstdc++
-endif
+#ifeq ($(ZT_OFFICIAL),1)
+#	CORE_OBJS+=ext/misc/linux-old-glibc-compat.o
+#	override LDFLAGS+=-Wl,--wrap=memcpy -static-libstdc++
+#endif
 
 ifeq ($(ZT_CONTROLLER),1)
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
