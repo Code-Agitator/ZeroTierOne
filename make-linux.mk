@@ -71,7 +71,7 @@ endif
 
 # Build with address sanitization library for advanced debugging (clang)
 ifeq ($(ZT_SANITIZE),1)
-	override DEFS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
+	override DEFS+=-fsanitize=address,undefined -DASAN_OPTIONS=symbolize=1
 endif
 ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
