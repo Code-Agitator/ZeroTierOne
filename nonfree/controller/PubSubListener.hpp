@@ -35,7 +35,7 @@ class PubSubListener : public NotificationListener {
 	void subscribe();
 	bool _run = false;
 	google::cloud::pubsub_admin::SubscriptionAdminClient _adminClient;
-	google::cloud::pubsub::Subscription _subscription;
+	google::cloud::pubsub::Subscription* _subscription;
 	std::shared_ptr<google::cloud::pubsub::Subscriber> _subscriber;
 	std::thread _subscriberThread;
 };
