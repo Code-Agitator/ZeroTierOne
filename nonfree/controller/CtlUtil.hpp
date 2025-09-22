@@ -20,6 +20,12 @@ std::string random_hex_string(std::size_t length);
 
 #ifdef ZT1_CENTRAL_CONTROLLER
 void create_gcp_pubsub_topic_if_needed(std::string project_id, std::string topic_id);
+
+void create_gcp_pubsub_subscription_if_needed(
+	std::string project_id,
+	std::string subscription_id,
+	std::string topic_id,
+	std::string controller_id);
 #endif
 
 }	// namespace ZeroTier

@@ -119,6 +119,39 @@ void create_gcp_pubsub_topic_if_needed(std::string project_id, std::string topic
 	}
 }
 
+void create_gcp_pubsub_subscription_if_needed(
+	std::string project_id,
+	std::string subscription_id,
+	std::string topic_id,
+	std::string controller_id)
+{
+	// This is a no-op if the subscription already exists.
+	auto subscriptionAdminClient =
+		pubsub_admin::SubscriptionAdminClient(pubsub_admin::MakeSubscriptionAdminConnection());
+	auto topicName = pubsub::Topic(project_id, topic_id).FullName();
+	auto subscriptionName = pubsub::Subscription(project_id, subscription_id).FullName();
+
+	auto sub = subscriptionAdminClient.GetSubscription(subscriptionName);
+	if (! sub.ok()) {
+		if (sub.status().code() == google::cloud::StatusCode::kNotFound) {
+			google::pubsub::v1::Subscription request;
+			request.set_name(subscription_id);
+			request.set_topic(pubsub::Topic(project_id, topic_id).FullName());
+			request.set_filter("(attributes.controller_id=\"" + controller_id + "\")");
+			auto createResult = subscriptionAdminClient.CreateSubscription(request);
+			if (! createResult.ok()) {
+				fprintf(stderr, "Failed to create subscription: %s\n", createResult.status().message().c_str());
+				throw std::runtime_error("Failed to create subscription");
+			}
+			fprintf(stderr, "Created subscription: %s\n", subscriptionName.c_str());
+		}
+		else {
+			fprintf(stderr, "Failed to get subscription: %s\n", sub.status().message().c_str());
+			throw std::runtime_error("Failed to get subscription");
+		}
+	}
+}
+
 // void create_bigtable_table(std::string project_id, std::string instance_id)
 // {
 // 	auto bigtableAdminClient =

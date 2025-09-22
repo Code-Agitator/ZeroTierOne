@@ -35,33 +35,19 @@ PubSubListener::PubSubListener(std::string controller_id, std::string project, s
 	, _adminClient(pubsub_admin::MakeSubscriptionAdminConnection())
 	, _subscription(nullptr)
 {
+	GOOGLE_PROTOBUF_VERIFY_VERSION;
+
 	_subscription_id = "sub-" + controller_id + "-" + topic;   // + "-" + random_hex_string(8);
 	_subscription = new pubsub::Subscription(_project, _subscription_id);
 	fprintf(
 		stderr, "PubSubListener for controller %s project %s topic %s subscription %s\n", controller_id.c_str(),
 		project.c_str(), topic.c_str(), _subscription_id.c_str());
-	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	// If PUBSUB_EMULATOR_HOST is set, create the topic if it doesn't exist
 	const char* emulatorHost = std::getenv("PUBSUB_EMULATOR_HOST");
 	if (emulatorHost != nullptr) {
 		create_gcp_pubsub_topic_if_needed(project, topic);
-	}
-
-	google::pubsub::v1::Subscription request;
-	request.set_name(_subscription->FullName());
-	request.set_topic(pubsub::Topic(project, topic).FullName());
-	request.set_filter("(attributes.controller_id=\"" + _controller_id + "\")");
-	auto sub = _adminClient.CreateSubscription(request);
-	if (! sub.ok()) {
-		if (sub.status().code() == google::cloud::StatusCode::kAlreadyExists) {
-			fprintf(stderr, "Subscription already exists.  Attaching to it\n");
-			// throw std::runtime_error("Subscription already exists");
-		}
-		else {
-			fprintf(stderr, "Failed to create subscription: %s\n", sub.status().message().c_str());
-			throw std::runtime_error("Failed to create subscription");
-		}
+		create_gcp_pubsub_subscription_if_needed(_project, _subscription_id, _topic, _controller_id);
 	}
 
 	_subscriber = std::make_shared<pubsub::Subscriber>(pubsub::MakeSubscriberConnection(*_subscription));
@@ -75,11 +61,6 @@ PubSubListener::~PubSubListener()
 	_run = false;
 	if (_subscriberThread.joinable()) {
 		_subscriberThread.join();
-	}
-
-	auto status = _adminClient.DeleteSubscription(_subscription->FullName());
-	if (! status.ok()) {
-		fprintf(stderr, "Failed to delete subscription: %s\n", status.message().c_str());
 	}
 
 	if (_subscription) {
