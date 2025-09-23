@@ -1,17 +1,13 @@
-ZeroTier - Global Area Networking
-======
-
-# ZeroTier \- Global Area Networking
+# ZeroTier - Global Area Networking
 
 ## Quick Links
 
 * [ZeroTier Documentation](https://docs.zerotier.com) - **Start here for downloads, installation, and usage**
+* [How to build](build.md) - **Build instructions and platform requirements**
 * [Corporate Site](https://www.zerotier.com/)
 * [Downloads](https://www.zerotier.com/download/)
-* [Architecture Overview](architecture.md)
-* [Build and Project Information](build.md)
 * [Service API Reference](service/README.md)
-* [Network Controller](controller/README.md)
+* [Network Controller](nonfree/controller/README.md)
 * [Commercial Support](https://www.zerotier.com/contact)
 * [License Information](#license)
 
