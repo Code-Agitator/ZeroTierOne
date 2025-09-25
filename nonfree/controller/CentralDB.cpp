@@ -1303,21 +1303,29 @@ void CentralDB::commitThread()
 					std::string id = config["id"];
 
 					pqxx::row nwrow =
-						w.exec(
-							 "SELECT COUNT(id), frontend FROM networks_ctl WHERE id = $1 GROUP BY frontend",
-							 pqxx::params { id })
+						w.exec("SELECT COUNT(id) frontend FROM networks_ctl WHERE id = $1", pqxx::params { id })
 							.one_row();
 					int nwcount = nwrow[0].as<int>();
-					std::string frontend = nwrow[1].as<std::string>();
 					bool isNewNetwork = (nwcount == 0);
+					std::string frontend = "";
+
+					if (! isNewNetwork) {
+						pqxx::row nwrow =
+							w.exec("SELECT frontend FROM networks_ctl WHERE id = $1", pqxx::params { id }).one_row();
+						frontend = nwrow[0].as<std::string>();
+					}
 
 					std::string change_source;
 					if (! config["change_source"].is_null()) {
 						change_source = config["change_source"];
 					}
+
 					if (! isNewNetwork && change_source != "controller" && frontend != change_source) {
 						// if it is not a new network and the change source is not the controller and doesn't match the
 						// frontend, don't apply the change.
+						fprintf(
+							stderr, "Skipping network update %s. isNewNetwork: %s, change_source: %s, frontend: %s\n",
+							id.c_str(), isNewNetwork ? "true" : "false", change_source.c_str(), frontend.c_str());
 						continue;
 					}
 

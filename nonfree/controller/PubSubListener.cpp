@@ -134,7 +134,7 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 		return;
 	}
 
-	fprintf(stderr, "Network notification received");
+	fprintf(stderr, "Network notification received\n");
 
 	try {
 		nlohmann::json oldConfig, newConfig;
