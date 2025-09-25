@@ -134,8 +134,9 @@ void create_gcp_pubsub_subscription_if_needed(
 	auto sub = subscriptionAdminClient.GetSubscription(subscriptionName);
 	if (! sub.ok()) {
 		if (sub.status().code() == google::cloud::StatusCode::kNotFound) {
+			fprintf(stderr, "Creating subscription %s for topic %s\n", subscriptionName.c_str(), topicName.c_str());
 			google::pubsub::v1::Subscription request;
-			request.set_name(subscription_id);
+			request.set_name(subscriptionName);
 			request.set_topic(pubsub::Topic(project_id, topic_id).FullName());
 			request.set_filter("(attributes.controller_id=\"" + controller_id + "\")");
 			auto createResult = subscriptionAdminClient.CreateSubscription(request);
