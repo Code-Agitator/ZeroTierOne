@@ -351,10 +351,10 @@ bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 		}
 	}
 	catch (std::exception& e) {
-		fprintf(stderr, "Error on PostgreSQL::save: %s\n", e.what());
+		fprintf(stderr, "Error on CentralDB::save: %s\n", e.what());
 	}
 	catch (...) {
-		fprintf(stderr, "Unknown error on PostgreSQL::save\n");
+		fprintf(stderr, "Unknown error on CentralDB::save\n");
 	}
 	return modified;
 }
@@ -368,7 +368,7 @@ void CentralDB::eraseNetwork(const uint64_t networkId)
 	char networkIdStr[17];
 	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
 
-	fprintf(stderr, "PostgreSQL::eraseNetwork\n");
+	fprintf(stderr, "CentralDB::eraseNetwork\n");
 	char tmp2[24];
 	waitForReady();
 	Utils::hex(networkId, tmp2);
@@ -392,7 +392,7 @@ void CentralDB::eraseMember(const uint64_t networkId, const uint64_t memberId)
 	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
 	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
 
-	fprintf(stderr, "PostgreSQL::eraseMember\n");
+	fprintf(stderr, "CentralDB::eraseMember\n");
 	char tmp2[24];
 	waitForReady();
 	std::pair<nlohmann::json, bool> tmp, nw;
@@ -467,7 +467,7 @@ AuthInfo CentralDB::getSSOAuthInfo(const nlohmann::json& member, const std::stri
 		//	info.version=1;
 		//	return info;
 		// }
-		//  fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
+		//  fprintf(stderr, "CentralDB::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
 		std::shared_ptr<PostgresConnection> c;
 		try {
 			c = _pool->borrow();

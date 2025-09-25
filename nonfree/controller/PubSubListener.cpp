@@ -277,6 +277,7 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 {
 	nlohmann::json out;
 
+	out["objtype"] = "network";
 	out["id"] = nc.network_id();
 	out["name"] = nc.name();
 	out["capabilities"] = OSUtils::jsonParse(nc.capabilities());
@@ -387,6 +388,7 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 nlohmann::json toJson(const pbmessages::MemberChange_Member& mc, pbmessages::MemberChange_ChangeSource source)
 {
 	nlohmann::json out;
+	out["objtype"] = "member";
 	out["id"] = mc.device_id();
 	out["nwid"] = mc.network_id();
 	if (mc.has_remote_trace_target()) {
