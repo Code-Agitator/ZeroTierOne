@@ -1352,7 +1352,7 @@ void CentralDB::commitThread()
 
 					w.commit();
 
-					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
+					const uint64_t nwidInt = OSUtils::jsonIntHex(config["id"], 0ULL);
 					if (nwidInt) {
 						nlohmann::json nwOrig;
 						nlohmann::json nwNew(config);
