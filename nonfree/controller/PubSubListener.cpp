@@ -56,7 +56,7 @@ PubSubListener::PubSubListener(std::string controller_id, std::string project, s
 	_subscriberThread = std::thread(&PubSubListener::subscribe, this);
 }
 
-PubSubListener::~PubSubListener()`
+PubSubListener::~PubSubListener()
 {
 	_run = false;
 	if (_subscriberThread.joinable()) {
