@@ -56,7 +56,7 @@ PubSubListener::PubSubListener(std::string controller_id, std::string project, s
 	_subscriberThread = std::thread(&PubSubListener::subscribe, this);
 }
 
-PubSubListener::~PubSubListener()
+PubSubListener::~PubSubListener()`
 {
 	_run = false;
 	if (_subscriberThread.joinable()) {
@@ -174,13 +174,14 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 		}
 	}
 	catch (const nlohmann::json::parse_error& e) {
-		fprintf(stderr, "JSON parse error: %s\n", e.what());
+		fprintf(stderr, "PubSubNetworkListener JSON parse error: %s\n", e.what());
 		span->SetAttribute("error", e.what());
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
+		fprintf(stderr, "payload: %s\n", payload.c_str());
 		return;
 	}
 	catch (const std::exception& e) {
-		fprintf(stderr, "Exception in PubSubNetworkListener: %s\n", e.what());
+		fprintf(stderr, "PubSubNetworkListener Exception in PubSubNetworkListener: %s\n", e.what());
 		span->SetAttribute("error", e.what());
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
 		return;
@@ -260,13 +261,14 @@ void PubSubMemberListener::onNotification(const std::string& payload)
 		}
 	}
 	catch (const nlohmann::json::parse_error& e) {
-		fprintf(stderr, "JSON parse error: %s\n", e.what());
+		fprintf(stderr, "PubSubMemberListener JSON parse error: %s\n", e.what());
 		span->SetAttribute("error", e.what());
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
+		fprintf(stderr, "payload: %s\n", payload.c_str());
 		return;
 	}
 	catch (const std::exception& e) {
-		fprintf(stderr, "Exception in PubSubMemberListener: %s\n", e.what());
+		fprintf(stderr, "PubSubMemberListener Exception in PubSubMemberListener: %s\n", e.what());
 		span->SetAttribute("error", e.what());
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
 		return;
