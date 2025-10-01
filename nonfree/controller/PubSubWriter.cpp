@@ -261,8 +261,26 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 			}
 		}
 		m->set_active_bridge(j.value("activeBridge", false));
-		m->set_tags(OSUtils::jsonDump(j.value("tags", nlohmann::json::array()), -1));
-		m->set_capabilities(OSUtils::jsonDump(j.value("capabilities", nlohmann::json::array()), -1));
+		if (j["tags"].is_array()) {
+			nlohmann::json tags = j["tags"];
+			std::string tagsStr = OSUtils::jsonDump(tags, -1);
+			m->set_tags(tagsStr);
+		}
+		else {
+			nlohmann::json tags = nlohmann::json::array();
+			std::string tagsStr = OSUtils::jsonDump(tags, -1);
+			m->set_tags(tagsStr);
+		}
+		if (j["capabilities"].is_array()) {
+			nlohmann::json caps = j["capabilities"];
+			std::string capsStr = OSUtils::jsonDump(caps, -1);
+			m->set_capabilities(capsStr);
+		}
+		else {
+			nlohmann::json caps = nlohmann::json::array();
+			std::string capsStr = OSUtils::jsonDump(caps, -1);
+			m->set_capabilities(capsStr);
+		}
 		m->set_creation_time(j.value("creationTime", 0));
 		m->set_no_auto_assign_ips(j.value("noAutoAssignIps", false));
 		m->set_revision(j.value("revision", 0));
