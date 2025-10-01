@@ -1583,7 +1583,7 @@ void CentralDB::onlineNotificationThread()
 				std::vector<std::string> osArchSplit = split(osArch, '/');
 				std::string os = "unknown";
 				std::string arch = "unknown";
-				std::string frontend = network["frontend"].get<std::string>();
+				std::string frontend = OSUtils::jsonString(network["frontend"], "");
 
 				int vMajor = OSUtils::jsonInt(member["vMajor"], 0);
 				int vMinor = OSUtils::jsonInt(member["vMinor"], 0);
