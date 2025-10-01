@@ -17,9 +17,9 @@ namespace pubsub = ::google::cloud::pubsub;
 
 namespace ZeroTier {
 
-pbmessages::NetworkChange
+pbmessages::NetworkChange*
 networkChangeFromJson(std::string controllerID, const nlohmann::json& oldNetwork, const nlohmann::json& newNetwork);
-pbmessages::MemberChange
+pbmessages::MemberChange*
 memberChangeFromJson(std::string controllerID, const nlohmann::json& oldMember, const nlohmann::json& newMember);
 
 PubSubWriter::PubSubWriter(std::string project, std::string topic, std::string controller_id)
@@ -53,6 +53,7 @@ PubSubWriter::~PubSubWriter()
 
 bool PubSubWriter::publishMessage(const std::string& payload, const std::string& frontend)
 {
+	fprintf(stderr, "Publishing message to %s\n", _topic.c_str());
 	std::vector<std::pair<std::string, std::string> > attributes;
 	attributes.emplace_back("controller_id", _controller_id);
 
@@ -76,13 +77,15 @@ bool PubSubWriter::publishNetworkChange(
 	const nlohmann::json& newNetwork,
 	const std::string& frontend)
 {
-	pbmessages::NetworkChange nc = networkChangeFromJson(_controller_id, oldNetwork, newNetwork);
+	fprintf(stderr, "Publishing network change\n");
+	pbmessages::NetworkChange* nc = networkChangeFromJson(_controller_id, oldNetwork, newNetwork);
 	std::string payload;
-	if (! nc.SerializeToString(&payload)) {
+	if (! nc->SerializeToString(&payload)) {
 		fprintf(stderr, "Failed to serialize NetworkChange protobuf message\n");
+		delete nc;
 		return false;
 	}
-
+	delete nc;
 	return publishMessage(payload, frontend);
 }
 
@@ -91,13 +94,16 @@ bool PubSubWriter::publishMemberChange(
 	const nlohmann::json& newMember,
 	const std::string& frontend)
 {
-	pbmessages::MemberChange mc = memberChangeFromJson(_controller_id, oldMember, newMember);
+	fprintf(stderr, "Publishing member change\n");
+	pbmessages::MemberChange* mc = memberChangeFromJson(_controller_id, oldMember, newMember);
 	std::string payload;
-	if (! mc.SerializeToString(&payload)) {
+	if (! mc->SerializeToString(&payload)) {
 		fprintf(stderr, "Failed to serialize MemberChange protobuf message\n");
+		delete mc;
 		return false;
 	}
 
+	delete mc;
 	return publishMessage(payload, frontend);
 }
 
@@ -224,18 +230,19 @@ pbmessages::NetworkChange_Network* networkFromJson(const nlohmann::json& j)
 	return n;
 }
 
-pbmessages::NetworkChange
+pbmessages::NetworkChange*
 networkChangeFromJson(std::string controllerID, const nlohmann::json& oldNetwork, const nlohmann::json& newNetwork)
 {
-	pbmessages::NetworkChange nc;
-	nc.set_allocated_old(networkFromJson(oldNetwork));
-	nc.set_allocated_new_(networkFromJson(newNetwork));
-	nc.set_change_source(pbmessages::NetworkChange_ChangeSource::NetworkChange_ChangeSource_CONTROLLER);
+	pbmessages::NetworkChange* nc = new pbmessages::NetworkChange();
+
+	nc->set_allocated_old(networkFromJson(oldNetwork));
+	nc->set_allocated_new_(networkFromJson(newNetwork));
+	nc->set_change_source(pbmessages::NetworkChange_ChangeSource::NetworkChange_ChangeSource_CONTROLLER);
 
 	pbmessages::NetworkChange_NetworkChangeMetadata* metadata = new pbmessages::NetworkChange_NetworkChangeMetadata();
 	metadata->set_controller_id(controllerID);
 	metadata->set_trace_id("");	  // TODO: generate a trace ID
-	nc.set_allocated_metadata(metadata);
+	nc->set_allocated_metadata(metadata);
 
 	return nc;
 }
@@ -243,6 +250,7 @@ networkChangeFromJson(std::string controllerID, const nlohmann::json& oldNetwork
 pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 {
 	if (! j.is_object()) {
+		fprintf(stderr, "memberFromJson: JSON is not an object\n");
 		return nullptr;
 	}
 
@@ -254,33 +262,40 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 		m->set_device_id(j.value("id", ""));
 		m->set_identity(j.value("identity", ""));
 		m->set_authorized(j.value("authorized", false));
-		for (const auto& addr : j.value("ipAssignments", nlohmann::json::array())) {
-			if (addr.is_string()) {
-				auto a = m->add_ip_assignments();
-				*a = addr;
+		if (j["ipAssignments"].is_array()) {
+			fprintf(stderr, "memberFromJSON: has ipAssignments\n");
+			for (const auto& addr : j["ipAssignments"]) {
+				if (addr.is_string()) {
+					auto a = m->add_ip_assignments();
+					std::string address = addr.get<std::string>();
+					*a = address;
+				}
 			}
 		}
+		else {
+			fprintf(stderr, "memberFromJSON: no ipAssignments\n");
+		}
 		m->set_active_bridge(j.value("activeBridge", false));
-		// if (j["tags"].is_array()) {
-		// 	nlohmann::json tags = j["tags"];
-		// 	std::string tagsStr = OSUtils::jsonDump(tags, -1);
-		// 	m->set_tags(tagsStr);
-		// }
-		// else {
-		// 	nlohmann::json tags = nlohmann::json::array();
-		// 	std::string tagsStr = OSUtils::jsonDump(tags, -1);
-		// 	m->set_tags(tagsStr);
-		// }
-		// if (j["capabilities"].is_array()) {
-		// 	nlohmann::json caps = j["capabilities"];
-		// 	std::string capsStr = OSUtils::jsonDump(caps, -1);
-		// 	m->set_capabilities(capsStr);
-		// }
-		// else {
-		// 	nlohmann::json caps = nlohmann::json::array();
-		// 	std::string capsStr = OSUtils::jsonDump(caps, -1);
-		// 	m->set_capabilities(capsStr);
-		// }
+		if (j["tags"].is_array()) {
+			nlohmann::json tags = j["tags"];
+			std::string tagsStr = OSUtils::jsonDump(tags, -1);
+			m->set_tags(tagsStr);
+		}
+		else {
+			nlohmann::json tags = nlohmann::json::array();
+			std::string tagsStr = OSUtils::jsonDump(tags, -1);
+			m->set_tags(tagsStr);
+		}
+		if (j["capabilities"].is_array()) {
+			nlohmann::json caps = j["capabilities"];
+			std::string capsStr = OSUtils::jsonDump(caps, -1);
+			m->set_capabilities(capsStr);
+		}
+		else {
+			nlohmann::json caps = nlohmann::json::array();
+			std::string capsStr = OSUtils::jsonDump(caps, -1);
+			m->set_capabilities(capsStr);
+		}
 		m->set_creation_time(j.value("creationTime", 0));
 		m->set_no_auto_assign_ips(j.value("noAutoAssignIps", false));
 		m->set_revision(j.value("revision", 0));
@@ -302,22 +317,30 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 		delete m;
 		return nullptr;
 	}
-
+	fprintf(stderr, "memberFromJSON complete\n");
 	return m;
 }
 
-pbmessages::MemberChange
+pbmessages::MemberChange*
 memberChangeFromJson(std::string controllerID, const nlohmann::json& oldMember, const nlohmann::json& newMember)
 {
-	pbmessages::MemberChange mc;
-	mc.set_allocated_old(memberFromJson(oldMember));
-	mc.set_allocated_new_(memberFromJson(newMember));
-	mc.set_change_source(pbmessages::MemberChange_ChangeSource::MemberChange_ChangeSource_CONTROLLER);
+	fprintf(stderr, "memberrChangeFromJson: old: %s\n", oldMember.dump().c_str());
+	fprintf(stderr, "memberrChangeFromJson: new: %s\n", newMember.dump().c_str());
+	pbmessages::MemberChange* mc = new pbmessages::MemberChange();
+	pbmessages::MemberChange_Member* om = memberFromJson(oldMember);
+	if (om != nullptr) {
+		mc->set_allocated_old(om);
+	}
+	pbmessages::MemberChange_Member* nm = memberFromJson(newMember);
+	if (nm != nullptr) {
+		mc->set_allocated_new_(nm);
+	}
+	mc->set_change_source(pbmessages::MemberChange_ChangeSource::MemberChange_ChangeSource_CONTROLLER);
 
 	pbmessages::MemberChange_MemberChangeMetadata* metadata = new pbmessages::MemberChange_MemberChangeMetadata();
 	metadata->set_controller_id(controllerID);
 	metadata->set_trace_id("");	  // TODO: generate a trace ID
-	mc.set_allocated_metadata(metadata);
+	mc->set_allocated_metadata(metadata);
 
 	return mc;
 }
