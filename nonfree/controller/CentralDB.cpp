@@ -1115,7 +1115,7 @@ void CentralDB::commitThread()
 		auto span = tracer->StartSpan("CentralDB::commitThread");
 		auto scope = tracer->WithActiveSpan(span);
 
-		// fprintf(stderr, "commitThread tick\n");
+		fprintf(stderr, "commitThread tick\n");
 		if (! qitem.first.is_object()) {
 			fprintf(stderr, "not an object\n");
 			continue;
