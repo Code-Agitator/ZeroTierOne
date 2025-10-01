@@ -275,42 +275,67 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 		else {
 			fprintf(stderr, "memberFromJSON: no ipAssignments\n");
 		}
+		fprintf(stderr, "ipAssignments set\n");
 		m->set_active_bridge(j.value("activeBridge", false));
+		fprintf(stderr, "activeBridge set\n");
 		if (j["tags"].is_array()) {
+			fprintf(stderr, "memberFromJSON: has tags\n");
 			nlohmann::json tags = j["tags"];
 			std::string tagsStr = OSUtils::jsonDump(tags, -1);
 			m->set_tags(tagsStr);
+			fprintf(stderr, "tags set\n");
 		}
 		else {
+			fprintf(stderr, "memberFromJSON: no tags\n");
 			nlohmann::json tags = nlohmann::json::array();
 			std::string tagsStr = OSUtils::jsonDump(tags, -1);
 			m->set_tags(tagsStr);
+			fprintf(stderr, "tags set\n");
 		}
 		if (j["capabilities"].is_array()) {
+			fprintf(stderr, "memberFromJSON: has capabilities\n");
 			nlohmann::json caps = j["capabilities"];
 			std::string capsStr = OSUtils::jsonDump(caps, -1);
 			m->set_capabilities(capsStr);
+			fprintf(stderr, "capabilities set\n");
 		}
 		else {
+			fprintf(stderr, "memberFromJSON: no capabilities\n");
 			nlohmann::json caps = nlohmann::json::array();
 			std::string capsStr = OSUtils::jsonDump(caps, -1);
 			m->set_capabilities(capsStr);
+			fprintf(stderr, "capabilities set\n");
 		}
 		m->set_creation_time(j.value("creationTime", 0));
+		fprintf(stderr, "creationTime set\n");
 		m->set_no_auto_assign_ips(j.value("noAutoAssignIps", false));
+		fprintf(stderr, "noAutoAssignIps set\n");
 		m->set_revision(j.value("revision", 0));
+		fprintf(stderr, "revision set\n");
 		m->set_last_authorized_time(j.value("lastAuthorizedTime", 0));
+		fprintf(stderr, "lastAuthorizedTime set\n");
 		m->set_last_deauthorized_time(j.value("lastDeauthorizedTime", 0));
-		m->set_last_authorized_credential_type(j.value("lastAuthorizedCredentialType", nullptr));
-		m->set_last_authorized_credential(j.value("lastAuthorizedCredential", nullptr));
+		fprintf(stderr, "lastDeauthorizedTime set\n");
+		m->set_last_authorized_credential_type(j.value("lastAuthorizedCredentialType", ""));
+		fprintf(stderr, "lastAuthorizedCredentialType set\n");
+		m->set_last_authorized_credential(j.value("lastAuthorizedCredential", ""));
+		fprintf(stderr, "lastAuthorizedCredential set\n");
 		m->set_version_major(j.value("versionMajor", 0));
+		fprintf(stderr, "versionMajor set\n");
 		m->set_version_minor(j.value("versionMinor", 0));
+		fprintf(stderr, "versionMinor set\n");
 		m->set_version_rev(j.value("versionRev", 0));
+		fprintf(stderr, "versionRev set\n");
 		m->set_version_protocol(j.value("versionProtocol", 0));
+		fprintf(stderr, "versionProtocol set\n");
 		m->set_remote_trace_level(j.value("remoteTraceLevel", 0));
+		fprintf(stderr, "remoteTraceLevel set\n");
 		m->set_remote_trace_target(j.value("remoteTraceTarget", ""));
+		fprintf(stderr, "remoteTraceTarget set\n");
 		m->set_sso_exempt(j.value("ssoExempt", false));
+		fprintf(stderr, "ssoExempt set\n");
 		m->set_auth_expiry_time(j.value("authExpiryTime", 0));
+		fprintf(stderr, "authExpiryTime set\n");
 	}
 	catch (const std::exception& e) {
 		fprintf(stderr, "Exception parsing member JSON: %s\n", e.what());
