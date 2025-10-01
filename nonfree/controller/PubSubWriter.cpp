@@ -246,6 +246,8 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 		return nullptr;
 	}
 
+	fprintf(stderr, "memberFromJSON: %s\n", j.dump().c_str());
+
 	pbmessages::MemberChange_Member* m = new pbmessages::MemberChange_Member();
 	try {
 		m->set_network_id(j.value("networkId", ""));
