@@ -140,11 +140,20 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 		nlohmann::json oldConfig, newConfig;
 
 		if (nc.has_old()) {
+			fprintf(stderr, "has old network config\n");
 			oldConfig = toJson(nc.old(), nc.change_source());
 		}
 
 		if (nc.has_new_()) {
+			fprintf(stderr, "has new network config\n");
 			newConfig = toJson(nc.new_(), nc.change_source());
+		}
+
+		if (! nc.has_old() && ! nc.has_new_()) {
+			fprintf(stderr, "NetworkChange message has no old or new network config\n");
+			span->SetAttribute("error", "NetworkChange message has no old or new network config");
+			span->SetStatus(opentelemetry::trace::StatusCode::kError, "No old or new config");
+			return;
 		}
 
 		if (oldConfig.is_object() && newConfig.is_object()) {
@@ -186,6 +195,13 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
 		return;
 	}
+	catch (...) {
+		fprintf(stderr, "PubSubNetworkListener Unknown exception in PubSubNetworkListener\n");
+		span->SetAttribute("error", "Unknown exception in PubSubNetworkListener");
+		span->SetStatus(opentelemetry::trace::StatusCode::kError, "Unknown exception");
+		return;
+	}
+	fprintf(stderr, "PubSubNetworkListener onNotification complete\n");
 }
 
 PubSubMemberListener::PubSubMemberListener(std::string controller_id, std::string project, std::string topic, DB* db)
@@ -220,11 +236,20 @@ void PubSubMemberListener::onNotification(const std::string& payload)
 		nlohmann::json oldConfig, newConfig;
 
 		if (mc.has_old()) {
+			fprintf(stderr, "has old member config\n");
 			oldConfig = toJson(mc.old(), mc.change_source());
 		}
 
 		if (mc.has_new_()) {
+			fprintf(stderr, "has new member config\n");
 			newConfig = toJson(mc.new_(), mc.change_source());
+		}
+
+		if (! mc.has_old() && ! mc.has_new_()) {
+			fprintf(stderr, "MemberChange message has no old or new member config\n");
+			span->SetAttribute("error", "MemberChange message has no old or new member config");
+			span->SetStatus(opentelemetry::trace::StatusCode::kError, "No old or new config");
+			return;
 		}
 
 		if (oldConfig.is_object() && newConfig.is_object()) {
