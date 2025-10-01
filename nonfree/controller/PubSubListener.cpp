@@ -133,7 +133,7 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, "Failed to parse protobuf");
 		return;
 	}
-
+	fprintf(stderr, "PubSubNetworkListener: parsed protobuf message. %s\n", nc.DebugString().c_str());
 	fprintf(stderr, "Network notification received\n");
 
 	try {
@@ -212,7 +212,7 @@ void PubSubMemberListener::onNotification(const std::string& payload)
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, "Failed to parse protobuf");
 		return;
 	}
-
+	fprintf(stderr, "PubSubMemberListener: parsed protobuf message. %s\n", mc.DebugString().c_str());
 	fprintf(stderr, "Member notification received");
 
 	try {
@@ -318,7 +318,10 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 			pool["ipRangeEnd"] = p.end_ip();
 			pools.push_back(pool);
 		}
-		out["assignmentPools"] = pools;
+		out["ipAssignmentPools"] = pools;
+	}
+	else {
+		out["ipAssignmentPools"] = nlohmann::json::array();
 	}
 
 	if (nc.routes_size() > 0) {
@@ -342,6 +345,9 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 				servers.push_back(s);
 			}
 			dns["servers"] = servers;
+		}
+		else {
+			dns["servers"] = nlohmann::json::array();
 		}
 		dns["domain"] = nc.dns().domain();
 
