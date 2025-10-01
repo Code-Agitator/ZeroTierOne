@@ -1146,11 +1146,13 @@ void CentralDB::commitThread()
 				// fprintf(stderr, "%s: commitThread: member\n", _myAddressStr.c_str());
 				std::string memberId;
 				std::string networkId;
+
 				try {
 					pqxx::work w(*c->c);
 
 					memberId = config["id"];
 					networkId = config["nwid"];
+					fprintf(stderr, "commit member %s-%s\n", networkId.c_str(), memberId.c_str());
 
 					std::string target = "NULL";
 					if (! config["remoteTraceTarget"].is_null()) {
@@ -1308,6 +1310,7 @@ void CentralDB::commitThread()
 					pqxx::work w(*c->c);
 
 					std::string id = config["id"];
+					fprintf(stderr, "commit network %s\n", id.c_str());
 
 					pqxx::row nwrow =
 						w.exec("SELECT COUNT(id) frontend FROM networks_ctl WHERE id = $1", pqxx::params { id })
@@ -1450,6 +1453,8 @@ void CentralDB::commitThread()
 
 					std::string memberId = config["id"];
 					std::string networkId = config["nwid"];
+
+					fprintf(stderr, "Deleting member %s-%s\n", networkId.c_str(), memberId.c_str());
 
 					pqxx::result res =
 						w.exec(
