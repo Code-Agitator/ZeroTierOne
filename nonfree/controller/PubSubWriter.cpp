@@ -261,8 +261,8 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 			}
 		}
 		m->set_active_bridge(j.value("activeBridge", false));
-		m->set_tags(OSUtils::jsonDump(j.value("tags", "[]"), -1));
-		m->set_capabilities(OSUtils::jsonDump(j.value("capabilities", "[]"), -1));
+		m->set_tags(OSUtils::jsonDump(j.value("tags", nlohmann::json::array()), -1));
+		m->set_capabilities(OSUtils::jsonDump(j.value("capabilities", nlohmann::json::array()), -1));
 		m->set_creation_time(j.value("creationTime", 0));
 		m->set_no_auto_assign_ips(j.value("noAutoAssignIps", false));
 		m->set_revision(j.value("revision", 0));
