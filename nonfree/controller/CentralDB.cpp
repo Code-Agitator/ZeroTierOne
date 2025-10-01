@@ -680,6 +680,7 @@ void CentralDB::initializeNetworks()
 			std::optional<uint64_t> created_at = std::get<3>(row);
 			std::optional<uint64_t> last_modified = std::get<4>(row);
 			std::optional<uint64_t> revision = std::get<5>(row);
+			std::string frontend = std::get<6>(row);
 
 			config["id"] = nwid;
 			config["name"] = name;
@@ -717,12 +718,17 @@ void CentralDB::initializeNetworks()
 				config["v6AssignMode"]["rfc4193"] = false;
 			}
 			config["ssoEnabled"] = cfgtmp["ssoEnabled"].is_boolean() ? cfgtmp["ssoEnabled"].get<bool>() : false;
+			if (config["ssoConfig"].is_object()) {
+				config["ssoConfig"] = cfgtmp["ssoConfig"];
+			}
+			else {
+				config["ssoConfig"] = empty;
+			}
 			config["objtype"] = "network";
 			config["routes"] = cfgtmp["routes"].is_array() ? cfgtmp["routes"] : json::array();
 			config["clientId"] = cfgtmp["clientId"].is_string() ? cfgtmp["clientId"].get<std::string>() : "";
-			config["authorizationEndpoint"] = cfgtmp["authorizationEndpoint"].is_string()
-												  ? cfgtmp["authorizationEndpoint"].get<std::string>()
-												  : nullptr;
+			config["authorizationEndpoint"] =
+				cfgtmp["authorizationEndpoint"].is_string() ? cfgtmp["authorizationEndpoint"].get<std::string>() : "";
 			config["provider"] = cfgtmp["ssoProvider"].is_string() ? cfgtmp["ssoProvider"].get<std::string>() : "";
 			if (! cfgtmp["dns"].is_object()) {
 				cfgtmp["dns"] = json::object();
@@ -734,7 +740,7 @@ void CentralDB::initializeNetworks()
 			}
 			config["ipAssignmentPools"] =
 				cfgtmp["ipAssignmentPools"].is_array() ? cfgtmp["ipAssignmentPools"] : json::array();
-			config["frontend"] = std::get<6>(row);
+			config["frontend"] = frontend;
 
 			Metrics::network_count++;
 
@@ -742,7 +748,7 @@ void CentralDB::initializeNetworks()
 
 			auto end = std::chrono::high_resolution_clock::now();
 			auto dur = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-			;
+
 			total += dur.count();
 			++count;
 			if (count > 0 && count % 10000 == 0) {
