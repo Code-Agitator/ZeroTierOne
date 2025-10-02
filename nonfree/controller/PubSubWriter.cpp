@@ -316,9 +316,9 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 		fprintf(stderr, "lastAuthorizedTime set\n");
 		m->set_last_deauthorized_time(j.value("lastDeauthorizedTime", 0));
 		fprintf(stderr, "lastDeauthorizedTime set\n");
-		m->set_last_authorized_credential_type(j.value("lastAuthorizedCredentialType", ""));
+		m->set_last_authorized_credential_type(OSUtils::jsonString(j["lastAuthorizedCredentialType"], ""));
 		fprintf(stderr, "lastAuthorizedCredentialType set\n");
-		m->set_last_authorized_credential(j.value("lastAuthorizedCredential", ""));
+		m->set_last_authorized_credential(OSUtils::jsonString(j["lastAuthorizedCredential"], ""));
 		fprintf(stderr, "lastAuthorizedCredential set\n");
 		m->set_version_major(j.value("versionMajor", 0));
 		fprintf(stderr, "versionMajor set\n");
@@ -330,7 +330,7 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 		fprintf(stderr, "versionProtocol set\n");
 		m->set_remote_trace_level(j.value("remoteTraceLevel", 0));
 		fprintf(stderr, "remoteTraceLevel set\n");
-		m->set_remote_trace_target(j.value("remoteTraceTarget", ""));
+		m->set_remote_trace_target(OSUtils::jsonString(j["remoteTraceTarget"], ""));
 		fprintf(stderr, "remoteTraceTarget set\n");
 		m->set_sso_exempt(j.value("ssoExempt", false));
 		fprintf(stderr, "ssoExempt set\n");
