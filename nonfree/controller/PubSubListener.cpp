@@ -98,19 +98,16 @@ void PubSubListener::subscribe()
 			auto result = session.wait_for(std::chrono::seconds(10));
 			if (result == std::future_status::timeout) {
 				session.cancel();
-				std::this_thread::sleep_for(std::chrono::seconds(5));
 				continue;
 			}
 
 			if (! session.valid()) {
 				fprintf(stderr, "Subscription session no longer valid\n");
-				std::this_thread::sleep_for(std::chrono::seconds(5));
 				continue;
 			}
 		}
 		catch (google::cloud::Status const& status) {
 			fprintf(stderr, "Subscription terminated with status: %s\n", status.message().c_str());
-			std::this_thread::sleep_for(std::chrono::seconds(5));
 		}
 	}
 }
