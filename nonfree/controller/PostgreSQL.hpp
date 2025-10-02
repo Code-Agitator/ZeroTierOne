@@ -221,7 +221,7 @@ class PostgresMemberListener : public NotificationListener {
 
 	virtual void listen();
 
-	virtual void onNotification(const std::string& payload) override;
+	virtual bool onNotification(const std::string& payload) override;
 
   private:
 	bool _run = false;
@@ -244,7 +244,7 @@ class PostgresNetworkListener : public NotificationListener {
 
 	virtual void listen();
 
-	virtual void onNotification(const std::string& payload) override;
+	virtual bool onNotification(const std::string& payload) override;
 
   private:
 	bool _run = false;

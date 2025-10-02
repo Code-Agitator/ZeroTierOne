@@ -12,7 +12,11 @@
 
 namespace ZeroTier {
 
-PostgresMemberListener::PostgresMemberListener(DB* db, std::shared_ptr<ConnectionPool<PostgresConnection> > pool, const std::string& channel, uint64_t timeout)
+PostgresMemberListener::PostgresMemberListener(
+	DB* db,
+	std::shared_ptr<ConnectionPool<PostgresConnection> > pool,
+	const std::string& channel,
+	uint64_t timeout)
 	: NotificationListener()
 	, _db(db)
 	, _pool(pool)
@@ -45,7 +49,7 @@ void PostgresMemberListener::listen()
 	}
 }
 
-void PostgresMemberListener::onNotification(const std::string& payload)
+bool PostgresMemberListener::onNotification(const std::string& payload)
 {
 	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 	auto tracer = provider->GetTracer("PostgresMemberNotificationListener");
@@ -83,9 +87,14 @@ void PostgresMemberListener::onNotification(const std::string& payload)
 			fprintf(stderr, "member delete payload sent\n");
 		}
 	}
+	return true;
 }
 
-PostgresNetworkListener::PostgresNetworkListener(DB* db, std::shared_ptr<ConnectionPool<PostgresConnection> > pool, const std::string& channel, uint64_t timeout)
+PostgresNetworkListener::PostgresNetworkListener(
+	DB* db,
+	std::shared_ptr<ConnectionPool<PostgresConnection> > pool,
+	const std::string& channel,
+	uint64_t timeout)
 	: NotificationListener()
 	, _db(db)
 	, _pool(pool)
@@ -118,7 +127,7 @@ void PostgresNetworkListener::listen()
 	}
 }
 
-void PostgresNetworkListener::onNotification(const std::string& payload)
+bool PostgresNetworkListener::onNotification(const std::string& payload)
 {
 	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 	auto tracer = provider->GetTracer("db_network_notification");
@@ -166,6 +175,7 @@ void PostgresNetworkListener::onNotification(const std::string& payload)
 			fprintf(stderr, "network delete payload sent\n");
 		}
 	}
+	return true;
 }
 
 }	// namespace ZeroTier

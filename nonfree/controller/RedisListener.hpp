@@ -22,8 +22,9 @@ class RedisListener : public NotificationListener {
 	virtual ~RedisListener();
 
 	virtual void listen() = 0;
-	virtual void onNotification(const std::string& payload) override
+	virtual bool onNotification(const std::string& payload) override
 	{
+		return true;
 	}
 
 	void start()
@@ -50,7 +51,7 @@ class RedisNetworkListener : public RedisListener {
 	virtual ~RedisNetworkListener();
 
 	virtual void listen() override;
-	virtual void onNotification(const std::string& payload) override;
+	virtual bool onNotification(const std::string& payload) override;
 
   private:
 	DB* _db;
@@ -63,7 +64,7 @@ class RedisMemberListener : public RedisListener {
 	virtual ~RedisMemberListener();
 
 	virtual void listen() override;
-	virtual void onNotification(const std::string& payload) override;
+	virtual bool onNotification(const std::string& payload) override;
 
   private:
 	DB* _db;

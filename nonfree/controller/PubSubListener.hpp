@@ -23,7 +23,7 @@ class PubSubListener : public NotificationListener {
 	PubSubListener(std::string controller_id, std::string project, std::string topic);
 	virtual ~PubSubListener();
 
-	virtual void onNotification(const std::string& payload) = 0;
+	virtual bool onNotification(const std::string& payload) = 0;
 
   protected:
 	std::string _controller_id;
@@ -48,7 +48,7 @@ class PubSubNetworkListener : public PubSubListener {
 	PubSubNetworkListener(std::string controller_id, std::string project, std::string topic, DB* db);
 	virtual ~PubSubNetworkListener();
 
-	virtual void onNotification(const std::string& payload) override;
+	virtual bool onNotification(const std::string& payload) override;
 
   private:
 	DB* _db;
@@ -62,7 +62,7 @@ class PubSubMemberListener : public PubSubListener {
 	PubSubMemberListener(std::string controller_id, std::string project, std::string topic, DB* db);
 	virtual ~PubSubMemberListener();
 
-	virtual void onNotification(const std::string& payload) override;
+	virtual bool onNotification(const std::string& payload) override;
 
   private:
 	DB* _db;

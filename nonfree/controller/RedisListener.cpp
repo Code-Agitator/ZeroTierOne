@@ -131,9 +131,10 @@ void RedisNetworkListener::listen()
 	}
 }
 
-void RedisNetworkListener::onNotification(const std::string& payload)
+bool RedisNetworkListener::onNotification(const std::string& payload)
 {
 	// Handle notifications if needed
+	return true;
 }
 
 RedisMemberListener::RedisMemberListener(std::string controller_id, std::shared_ptr<sw::redis::Redis> redis, DB* db)
@@ -227,8 +228,9 @@ void RedisMemberListener::listen()
 	}
 }
 
-void RedisMemberListener::onNotification(const std::string& payload)
+bool RedisMemberListener::onNotification(const std::string& payload)
 {
+	return true;
 }
 
 }	// namespace ZeroTier

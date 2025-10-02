@@ -24,7 +24,7 @@ class NotificationListener {
 	 *
 	 * @param payload The payload of the notification.
 	 */
-	virtual void onNotification(const std::string& payload) = 0;
+	virtual bool onNotification(const std::string& payload) = 0;
 };
 
 }	// namespace ZeroTier

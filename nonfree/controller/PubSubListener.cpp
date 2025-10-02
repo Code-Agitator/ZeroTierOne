@@ -83,10 +83,16 @@ void PubSubListener::subscribe()
 				span->SetAttribute("ordering_key", m.ordering_key());
 
 				fprintf(stderr, "Received message %s\n", m.message_id().c_str());
-				onNotification(m.data());
-				std::move(h).ack();
-				span->SetStatus(opentelemetry::trace::StatusCode::kOk);
-				return true;
+				if (onNotification(m.data())) {
+					std::move(h).ack();
+					span->SetStatus(opentelemetry::trace::StatusCode::kOk);
+					return true;
+				}
+				else {
+					std::move(h).nack();
+					span->SetStatus(opentelemetry::trace::StatusCode::kError, "onNotification failed");
+					return false;
+				}
 			});
 
 			auto result = session.wait_for(std::chrono::seconds(10));
@@ -119,7 +125,7 @@ PubSubNetworkListener::~PubSubNetworkListener()
 {
 }
 
-void PubSubNetworkListener::onNotification(const std::string& payload)
+bool PubSubNetworkListener::onNotification(const std::string& payload)
 {
 	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 	auto tracer = provider->GetTracer("PubSubNetworkListener");
@@ -131,7 +137,7 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 		fprintf(stderr, "Failed to parse NetworkChange protobuf message\n");
 		span->SetAttribute("error", "Failed to parse NetworkChange protobuf message");
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, "Failed to parse protobuf");
-		return;
+		return false;
 	}
 	fprintf(stderr, "PubSubNetworkListener: parsed protobuf message. %s\n", nc.DebugString().c_str());
 	fprintf(stderr, "Network notification received\n");
@@ -153,7 +159,7 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 			fprintf(stderr, "NetworkChange message has no old or new network config\n");
 			span->SetAttribute("error", "NetworkChange message has no old or new network config");
 			span->SetStatus(opentelemetry::trace::StatusCode::kError, "No old or new config");
-			return;
+			return false;
 		}
 
 		if (oldConfig.is_object() && newConfig.is_object()) {
@@ -187,21 +193,22 @@ void PubSubNetworkListener::onNotification(const std::string& payload)
 		span->SetAttribute("error", e.what());
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
 		fprintf(stderr, "payload: %s\n", payload.c_str());
-		return;
+		return false;
 	}
 	catch (const std::exception& e) {
 		fprintf(stderr, "PubSubNetworkListener Exception in PubSubNetworkListener: %s\n", e.what());
 		span->SetAttribute("error", e.what());
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
-		return;
+		return false;
 	}
 	catch (...) {
 		fprintf(stderr, "PubSubNetworkListener Unknown exception in PubSubNetworkListener\n");
 		span->SetAttribute("error", "Unknown exception in PubSubNetworkListener");
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, "Unknown exception");
-		return;
+		return false;
 	}
 	fprintf(stderr, "PubSubNetworkListener onNotification complete\n");
+	return true;
 }
 
 PubSubMemberListener::PubSubMemberListener(std::string controller_id, std::string project, std::string topic, DB* db)
@@ -214,7 +221,7 @@ PubSubMemberListener::~PubSubMemberListener()
 {
 }
 
-void PubSubMemberListener::onNotification(const std::string& payload)
+bool PubSubMemberListener::onNotification(const std::string& payload)
 {
 	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 	auto tracer = provider->GetTracer("PubSubMemberListener");
@@ -226,7 +233,7 @@ void PubSubMemberListener::onNotification(const std::string& payload)
 		fprintf(stderr, "Failed to parse MemberChange protobuf message\n");
 		span->SetAttribute("error", "Failed to parse MemberChange protobuf message");
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, "Failed to parse protobuf");
-		return;
+		return false;
 	}
 	fprintf(stderr, "PubSubMemberListener: parsed protobuf message. %s\n", mc.DebugString().c_str());
 	fprintf(stderr, "Member notification received");
@@ -249,7 +256,7 @@ void PubSubMemberListener::onNotification(const std::string& payload)
 			fprintf(stderr, "MemberChange message has no old or new member config\n");
 			span->SetAttribute("error", "MemberChange message has no old or new member config");
 			span->SetStatus(opentelemetry::trace::StatusCode::kError, "No old or new config");
-			return;
+			return false;
 		}
 
 		if (oldConfig.is_object() && newConfig.is_object()) {
@@ -290,14 +297,15 @@ void PubSubMemberListener::onNotification(const std::string& payload)
 		span->SetAttribute("error", e.what());
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
 		fprintf(stderr, "payload: %s\n", payload.c_str());
-		return;
+		return false;
 	}
 	catch (const std::exception& e) {
 		fprintf(stderr, "PubSubMemberListener Exception in PubSubMemberListener: %s\n", e.what());
 		span->SetAttribute("error", e.what());
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
-		return;
+		return false;
 	}
+	return true;
 }
 
 nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::NetworkChange_ChangeSource source)
