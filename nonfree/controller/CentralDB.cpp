@@ -1207,6 +1207,30 @@ void CentralDB::commitThread()
 						}
 					}
 
+					std::vector<std::string> ipAssignments;
+					if (config["ipAssignments"].is_array()) {
+						for (auto& ip : config["ipAssignments"]) {
+							if (ip.is_string()) {
+								ipAssignments.push_back(ip.get<std::string>());
+							}
+						}
+					}
+
+					fprintf(stderr, "member json: %s\n", config.dump().c_str());
+
+					int64_t vMajor = OSUtils::jsonUInt(config["vMajor"], 0);
+					int64_t vMinor = OSUtils::jsonUInt(config["vMinor"], 0);
+					int64_t vRev = OSUtils::jsonUInt(config["vRev"], 0);
+					int64_t vProto = OSUtils::jsonUInt(config["vProto"], 0);
+					if (vMajor < 0)
+						vMajor = 0;
+					if (vMinor < 0)
+						vMinor = 0;
+					if (vRev < 0)
+						vRev = 0;
+					if (vProto < 0)
+						vProto = 0;
+
 					pqxx::result res =
 						w.exec(
 							 "INSERT INTO network_memberships_ctl (device_id, network_id, authorized, active_bridge, "
@@ -1235,25 +1259,25 @@ void CentralDB::commitThread()
 							 "version_protocol = EXCLUDED.version_protocol",
 							 pqxx::params { memberId,
 											networkId,
-											(bool)config["authorized"],
-											(bool)config["activeBridge"],
-											config["ipAssignments"].get<std::vector<std::string> >(),
-											(bool)config["noAutoAssignIps"],
-											(bool)config["ssoExempt"],
-											(uint64_t)config["authenticationExpiryTime"],
+											OSUtils::jsonBool(config["authorized"], false),
+											OSUtils::jsonBool(config["activeBridge"], false),
+											ipAssignments,
+											OSUtils::jsonBool(config["noAutoAssignIps"], false),
+											OSUtils::jsonBool(config["ssoExempt"], false),
+											OSUtils::jsonInt(config["authenticationExpiryTime"], 0),
 											OSUtils::jsonDump(config["capabilities"], -1),
-											(uint64_t)config["creationTime"],
+											OSUtils::jsonInt(config["creationTime"], OSUtils::now()),
 											OSUtils::jsonString(config["identity"], ""),
-											(uint64_t)config["lastAuthorizedTime"],
-											(uint64_t)config["lastDeauthorizedTime"],
-											(int)config["remoteTraceLevel"],
+											OSUtils::jsonInt(config["lastAuthorizedTime"], 0),
+											OSUtils::jsonInt(config["lastDeauthorizedTime"], 0),
+											OSUtils::jsonInt(config["remoteTraceLevel"], 0),
 											target,
-											(uint64_t)config["revision"],
+											OSUtils::jsonInt(config["revision"], 0),
 											OSUtils::jsonDump(config["tags"], -1),
-											(int)config["vMajor"],
-											(int)config["vMinor"],
-											(int)config["vRev"],
-											(int)config["vProto"] })
+											vMajor,
+											vMinor,
+											vRev,
+											vProto })
 							.no_rows();
 
 					w.commit();
