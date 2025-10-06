@@ -25,6 +25,35 @@ ZeroTier Release Notes
     * Compiler warnings removed through removing use of deprecated functions on some platforms.
     * Other minor bug fixes.
 
+  * Merged PRs:
+    * PR #2495: Hosted controller changes for cv1 os/arch reporting
+    * PR #2493: Add a warning about missing DNS functionality on Linux
+    * PR #2491: Fix: standardize bond link selection method JSON field naming
+    * PR #2489: Fix link select field in bond CLI
+    * PR #2487: Windows installer fixes
+    * PR #2486: Add 'apt update' to validation action
+    * PR #2482: Add OpenTelemetry support in Central Controllers
+    * PR #2481: Rust warning removal, clippy allows, update library versions
+    * PR #2477: Don't count bridges towards multicast limit. Send to all bridges
+    * PR #2475: clang-format
+    * PR #2474: Hello encryption
+    * PR #2452: CV2 db schema support
+    * PR #2451: Bump crossbeam-channel from 0.5.13 to 0.5.15 in /rustybits
+    * PR #2450: Bump tokio from 1.42.0 to 1.43.1 in /rustybits
+    * PR #2449: Bump openssl from 0.10.70 to 0.10.72 in /rustybits
+    * PR #2445: Allow setting local.conf content from Docker environment variable
+    * PR #2444: Temporal sdk fix
+    * PR #2443: Fix AuthInfo Provider not being set
+    * PR #2442: Bump ring from 0.17.8 to 0.17.13 in /rustybits
+    * PR #2441: Run CI on pull requests
+    * PR #2438: Add custom control plane for third-party device vendors
+    * PR #2432: Update upload-artifact action to use v4
+    * PR #2430: Bump openssl from 0.10.68 to 0.10.70 in /rustybits
+    * PR #2427: Fix active backup link selection
+    * PR #2417: Update rust dependencies
+    * PR #2409: Bump rustls from 0.23.15 to 0.23.18 in /rustybits
+    * PR #2405: Build fix for OpenBSD - See ticket #2397
+
 ----
 
 # 1.14

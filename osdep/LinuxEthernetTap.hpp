@@ -54,6 +54,7 @@ class LinuxEthernetTap : public EthernetTap {
 	virtual void setMtu(unsigned int mtu);
 	virtual void setDns(const char* domain, const std::vector<InetAddress>& servers)
 	{
+		fprintf(stderr, "WARNING: ignoring call to LinuxEthernetTap::setDns on Linux. This is not implemented yet. See https://github.com/zerotier/ZeroTierOne/issues/2492 for details" ZT_EOL_S);
 	}
 
   private:
