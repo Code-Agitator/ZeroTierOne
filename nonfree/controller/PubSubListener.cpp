@@ -330,14 +330,27 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 	if (nc.has_ipv4_assign_mode()) {
 		nlohmann::json ipv4mode;
 		ipv4mode["zt"] = nc.ipv4_assign_mode().zt();
-		out["ipv4AssignMode"] = ipv4mode;
+		out["v4AssignMode"] = ipv4mode;
 	}
+	else {
+		nlohmann::json ipv4mode = nlohmann::json::object();
+		out["zt"] = false;
+		out["v4AssignMode"] = ipv4mode;
+	}
+
 	if (nc.has_ipv6_assign_mode()) {
 		nlohmann::json ipv6mode;
 		ipv6mode["6plane"] = nc.ipv6_assign_mode().six_plane();
 		ipv6mode["rfc4193"] = nc.ipv6_assign_mode().rfc4193();
 		ipv6mode["zt"] = nc.ipv6_assign_mode().zt();
-		out["ipv6AssignMode"] = ipv6mode;
+		out["v6AssignMode"] = ipv6mode;
+	}
+	else {
+		nlohmann::json ipv6mode = nlohmann::json::object();
+		ipv6mode["6plane"] = false;
+		ipv6mode["rfc4193"] = false;
+		ipv6mode["zt"] = false;
+		out["v6AssignMode"] = ipv6mode;
 	}
 
 	if (nc.assignment_pools_size() > 0) {
