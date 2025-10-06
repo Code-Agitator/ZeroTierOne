@@ -358,11 +358,17 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 		nlohmann::json routes = nlohmann::json::array();
 		for (const auto& r : nc.routes()) {
 			nlohmann::json route;
-			route["target"] = r.target();
-			if (r.has_via()) {
-				route["via"] = r.via();
+			std::string target = r.target();
+			if (target.length() > 0) {
+				route["target"] = r.target();
+				if (r.has_via()) {
+					route["via"] = r.via();
+				}
+				else {
+					route["via"] = nullptr;
+				}
+				routes.push_back(route);
 			}
-			routes.push_back(route);
 		}
 		out["routes"] = routes;
 	}

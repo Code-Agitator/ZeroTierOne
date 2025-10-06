@@ -2301,10 +2301,20 @@ void EmbeddedNetworkController::_request(
 		}
 	}
 
+	fprintf(stderr, "haveManagedIpv4AutoAssignment=%s\n", haveManagedIpv4AutoAssignment ? "true" : "false");
+	fprintf(stderr, "ipAssignmentPools.is_array()=%s\n", ipAssignmentPools.is_array() ? "true" : "false");
+	fprintf(stderr, "v4AssignMode.is_object()=%s\n", v4AssignMode.is_object() ? "true" : "false");
+	fprintf(
+		stderr, "v4AssignMode[\"zt\"]=%s\n",
+		(v4AssignMode.is_object() && OSUtils::jsonBool(v4AssignMode["zt"], false)) ? "true" : "false");
+	fprintf(stderr, "noAutoAssignIps=%s\n", noAutoAssignIps ? "true" : "false");
+
 	if ((ipAssignmentPools.is_array()) && ((v4AssignMode.is_object()) && (OSUtils::jsonBool(v4AssignMode["zt"], false)))
 		&& (! haveManagedIpv4AutoAssignment) && (! noAutoAssignIps)) {
+		fprintf(stderr, "Trying to do managed IPv4 auto-assignment\n");
 		for (unsigned long p = 0; ((p < ipAssignmentPools.size()) && (! haveManagedIpv4AutoAssignment)); ++p) {
 			json& pool = ipAssignmentPools[p];
+			fprintf(stderr, "  considering pool %lu: %s\n", p, OSUtils::jsonDump(pool, 2).c_str());
 			if (pool.is_object()) {
 				InetAddress ipRangeStartIA(OSUtils::jsonString(pool["ipRangeStart"], "").c_str());
 				InetAddress ipRangeEndIA(OSUtils::jsonString(pool["ipRangeEnd"], "").c_str());
@@ -2314,8 +2324,10 @@ void EmbeddedNetworkController::_request(
 					uint32_t ipRangeEnd =
 						Utils::ntoh((uint32_t)(reinterpret_cast<struct sockaddr_in*>(&ipRangeEndIA)->sin_addr.s_addr));
 
-					if ((ipRangeEnd < ipRangeStart) || (ipRangeStart == 0))
+					if ((ipRangeEnd < ipRangeStart) || (ipRangeStart == 0)) {
+						fprintf(stderr, "  bad ip range range\n");
 						continue;
+					}
 					uint32_t ipRangeLen = ipRangeEnd - ipRangeStart;
 
 					// Start with the LSB of the member's address
@@ -2353,6 +2365,7 @@ void EmbeddedNetworkController::_request(
 							char tmpip[64];
 							const std::string ipStr(ip4.toIpString(tmpip));
 							if (std::find(ipAssignments.begin(), ipAssignments.end(), ipStr) == ipAssignments.end()) {
+								fprintf(stderr, "  assigning %s\n", ipStr.c_str());
 								ipAssignments.push_back(ipStr);
 								member["ipAssignments"] = ipAssignments;
 								if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
@@ -2426,6 +2439,7 @@ void EmbeddedNetworkController::_request(
 	c10++;
 	b10.start();
 #endif
+	member["change_source"] = "controller";
 	DB::cleanMember(member);
 	_db.save(member, true);
 #ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK

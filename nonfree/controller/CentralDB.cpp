@@ -1189,25 +1189,18 @@ void CentralDB::commitThread()
 						change_source = config["change_source"];
 					}
 					if (! isNewMember && change_source != "controller" && frontend != change_source) {
+						fprintf(
+							stderr, "skipping member %s-%s update.  change source: %s, frontend: %s\n",
+							networkId.c_str(), memberId.c_str(), change_source.c_str(), frontend.c_str());
 						// if it is not a new member and the change source is not the controller and doesn't match the
 						// frontend, don't apply the change.
 						continue;
 					}
 
-					if (_listenerMode == LISTENER_MODE_PUBSUB) {
-						// Publish change to pubsub stream
-
-						if (config["change_source"].is_null() || config["change_source"] == "controller") {
-							nlohmann::json oldMember;
-							nlohmann::json newMember = config;
-							if (! isNewMember) {
-								oldMember = _getNetworkMember(w, networkId, memberId);
-							}
-							_changeNotifier->notifyMemberChange(oldMember, newMember, frontend);
-						}
-					}
-
 					std::vector<std::string> ipAssignments;
+					fprintf(
+						stderr, "Saving IP Assignments: \n\tipAssignments: %s\n",
+						OSUtils::jsonDump(config["ipAssignments"], -1).c_str());
 					if (config["ipAssignments"].is_array()) {
 						for (auto& ip : config["ipAssignments"]) {
 							if (ip.is_string()) {
@@ -1281,6 +1274,19 @@ void CentralDB::commitThread()
 							.no_rows();
 
 					w.commit();
+
+					if (_listenerMode == LISTENER_MODE_PUBSUB) {
+						// Publish change to pubsub stream
+
+						if (config["change_source"].is_null() || config["change_source"] == "controller") {
+							nlohmann::json oldMember;
+							nlohmann::json newMember = config;
+							if (! isNewMember) {
+								oldMember = _getNetworkMember(w, networkId, memberId);
+							}
+							_changeNotifier->notifyMemberChange(oldMember, newMember, frontend);
+						}
+					}
 
 					if (_smee != NULL && isNewMember) {
 						// TODO: Smee Notifications for New Members
@@ -1363,6 +1369,17 @@ void CentralDB::commitThread()
 						continue;
 					}
 
+					pqxx::result res = w.exec(
+						"INSERT INTO networks_ctl (id, name, configuration, controller_id, revision, frontend) "
+						"VALUES ($1, $2, $3, $4, $5, $6) "
+						"ON CONFLICT (id) DO UPDATE SET "
+						"name = EXCLUDED.name, configuration = EXCLUDED.configuration, revision = EXCLUDED.revision+1, "
+						"frontend = EXCLUDED.frontend",
+						pqxx::params { id, OSUtils::jsonString(config["name"], ""), OSUtils::jsonDump(config, -1),
+									   _myAddressStr, ((uint64_t)config["revision"]), change_source });
+
+					w.commit();
+
 					if (_listenerMode == LISTENER_MODE_PUBSUB) {
 						// Publish change to pubsub stream
 						if (config["change_source"].is_null() || config["change_source"] == "controller") {
@@ -1374,17 +1391,6 @@ void CentralDB::commitThread()
 							_changeNotifier->notifyNetworkChange(oldNetwork, newNetwork, frontend);
 						}
 					}
-
-					pqxx::result res = w.exec(
-						"INSERT INTO networks_ctl (id, name, configuration, controller_id, revision, frontend) "
-						"VALUES ($1, $2, $3, $4, $5, $6) "
-						"ON CONFLICT (id) DO UPDATE SET "
-						"name = EXCLUDED.name, configuration = EXCLUDED.configuration, revision = EXCLUDED.revision+1, "
-						"frontend = EXCLUDED.frontend",
-						pqxx::params { id, OSUtils::jsonString(config["name"], ""), OSUtils::jsonDump(config, -1),
-									   _myAddressStr, ((uint64_t)config["revision"]), change_source });
-
-					w.commit();
 
 					const uint64_t nwidInt = OSUtils::jsonIntHex(config["id"], 0ULL);
 					if (nwidInt) {
