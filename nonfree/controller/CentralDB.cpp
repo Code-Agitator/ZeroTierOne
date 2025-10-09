@@ -1188,6 +1188,9 @@ void CentralDB::commitThread()
 					if (! config["change_source"].is_null()) {
 						change_source = config["change_source"];
 					}
+					else {
+						change_source = "controller";
+					}
 					if (! isNewMember && change_source != "controller" && frontend != change_source) {
 						fprintf(
 							stderr, "skipping member %s-%s update.  change source: %s, frontend: %s\n",
