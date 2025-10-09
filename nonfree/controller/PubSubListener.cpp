@@ -373,7 +373,7 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 	}
 	catch (const nlohmann::json::parse_error& e) {
 		fprintf(stderr, "toJson Network tags JSON parse error: %s\n", e.what());
-		out["tags"] = "[]";
+		out["tags"] = nlohmann::json::array();
 	}
 
 	if (nc.has_ipv4_assign_mode()) {
