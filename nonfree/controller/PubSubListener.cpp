@@ -313,8 +313,11 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 	out["name"] = nc.name();
 
 	std::string caps = nc.capabilities();
-	if (caps == "null") {
-		out["capabilities"] = "null";
+	if (caps.length() == 0) {
+		out["capabilities"] = "[]";
+	}
+	else if (caps == "null") {
+		out["capabilities"] = "[]";
 	}
 	else {
 		out["capabilities"] = OSUtils::jsonParse(caps);
@@ -332,7 +335,10 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 	}
 
 	std::string rules = nc.rules();
-	if (rules == "null") {
+	if (rules.length() == 0) {
+		out["rules"] = "[]";
+	}
+	else if (rules == "null") {
 		out["rules"] = "[]";
 	}
 	else {
@@ -342,7 +348,10 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 	out["rulesSource"] = nc.rules_source();
 
 	std::string tags = nc.tags();
-	if (tags == "[]") {
+	if (tags.length() == 0) {
+		out["tags"] = "[]";
+	}
+	else if (tags == "[]") {
 		out["tags"] = "[]";
 	}
 	else {
@@ -493,7 +502,10 @@ nlohmann::json toJson(const pbmessages::MemberChange_Member& mc, pbmessages::Mem
 	out["authenticationExpiryTime"] = mc.auth_expiry_time();
 
 	std::string caps = mc.capabilities();
-	if (caps == "null") {
+	if (caps.length() == 0) {
+		out["capabilities"] = "[]";
+	}
+	else if (caps == "null") {
 		out["capabilities"] = "[]";
 	}
 	else {
@@ -508,7 +520,10 @@ nlohmann::json toJson(const pbmessages::MemberChange_Member& mc, pbmessages::Mem
 	out["revision"] = mc.revision();
 
 	std::string tags = mc.tags();
-	if (tags == "null") {
+	if (tags.length() == 0) {
+		out["tags"] = "[]";
+	}
+	else if (tags == "null") {
 		out["tags"] = "[]";
 	}
 	else {
