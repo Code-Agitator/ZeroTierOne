@@ -89,7 +89,6 @@ void PubSubListener::subscribe()
 					return true;
 				}
 				else {
-					std::move(h).nack();
 					span->SetStatus(opentelemetry::trace::StatusCode::kError, "onNotification failed");
 					return false;
 				}
