@@ -312,15 +312,21 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 	out["id"] = nc.network_id();
 	out["name"] = nc.name();
 
-	std::string caps = nc.capabilities();
-	if (caps.length() == 0) {
-		out["capabilities"] = "[]";
+	try {
+		std::string caps = nc.capabilities();
+		if (caps.length() == 0) {
+			out["capabilities"] = nlohmann::json::array();
+		}
+		else if (caps == "null") {
+			out["capabilities"] = nlohmann::json::array();
+		}
+		else {
+			out["capabilities"] = OSUtils::jsonParse(caps);
+		}
 	}
-	else if (caps == "null") {
-		out["capabilities"] = "[]";
-	}
-	else {
-		out["capabilities"] = OSUtils::jsonParse(caps);
+	catch (const nlohmann::json::parse_error& e) {
+		fprintf(stderr, "toJson Network capabilities JSON parse error: %s\n", e.what());
+		out["capabilities"] = nlohmann::json::array();
 	}
 
 	out["mtu"] = nc.mtu();
@@ -334,28 +340,40 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 		out["remoteTraceTarget"] = "";
 	}
 
-	std::string rules = nc.rules();
-	if (rules.length() == 0) {
-		out["rules"] = "[]";
+	try {
+		std::string rules = nc.rules();
+		if (rules.length() == 0) {
+			out["rules"] = nlohmann::json::array();
+		}
+		else if (rules == "null") {
+			out["rules"] = nlohmann::json::array();
+		}
+		else {
+			out["rules"] = OSUtils::jsonParse(rules);
+		}
 	}
-	else if (rules == "null") {
-		out["rules"] = "[]";
-	}
-	else {
-		out["rules"] = OSUtils::jsonParse(rules);
+	catch (const nlohmann::json::parse_error& e) {
+		fprintf(stderr, "toJson Network rules JSON parse error: %s\n", e.what());
+		out["rules"] = nlohmann::json::array();
 	}
 
 	out["rulesSource"] = nc.rules_source();
 
-	std::string tags = nc.tags();
-	if (tags.length() == 0) {
-		out["tags"] = "[]";
+	try {
+		std::string tags = nc.tags();
+		if (tags.length() == 0) {
+			out["tags"] = nlohmann::json::array();
+		}
+		else if (tags == "[]") {
+			out["tags"] = nlohmann::json::array();
+		}
+		else {
+			out["tags"] = OSUtils::jsonParse(tags);
+		}
 	}
-	else if (tags == "[]") {
+	catch (const nlohmann::json::parse_error& e) {
+		fprintf(stderr, "toJson Network tags JSON parse error: %s\n", e.what());
 		out["tags"] = "[]";
-	}
-	else {
-		out["tags"] = OSUtils::jsonParse(tags);
 	}
 
 	if (nc.has_ipv4_assign_mode()) {
@@ -501,15 +519,22 @@ nlohmann::json toJson(const pbmessages::MemberChange_Member& mc, pbmessages::Mem
 	out["ssoExempt"] = mc.sso_exempt();
 	out["authenticationExpiryTime"] = mc.auth_expiry_time();
 
-	std::string caps = mc.capabilities();
-	if (caps.length() == 0) {
-		out["capabilities"] = "[]";
+	try {
+		std::string caps = mc.capabilities();
+		if (caps.length() == 0) {
+			out["capabilities"] = nlohmann::json::array();
+		}
+		else if (caps == "null") {
+			out["capabilities"] = nlohmann::json::array();
+		}
+		else {
+			out["capabilities"] = OSUtils::jsonParse(caps);
+		}
 	}
-	else if (caps == "null") {
-		out["capabilities"] = "[]";
-	}
-	else {
-		out["capabilities"] = OSUtils::jsonParse(caps);
+	catch (const nlohmann::json::parse_error& e) {
+		fprintf(stderr, "MemberChange member capabilities JSON parse error: %s\n", e.what());
+		fprintf(stderr, "capabilities: %s\n", mc.capabilities().c_str());
+		out["capabilities"] = nlohmann::json::array();
 	}
 
 	out["creationTime"] = mc.creation_time();
@@ -519,15 +544,22 @@ nlohmann::json toJson(const pbmessages::MemberChange_Member& mc, pbmessages::Mem
 	out["remoteTraceLevel"] = mc.remote_trace_level();
 	out["revision"] = mc.revision();
 
-	std::string tags = mc.tags();
-	if (tags.length() == 0) {
-		out["tags"] = "[]";
+	try {
+		std::string tags = mc.tags();
+		if (tags.length() == 0) {
+			out["tags"] = nlohmann::json::array();
+		}
+		else if (tags == "null") {
+			out["tags"] = nlohmann::json::array();
+		}
+		else {
+			out["tags"] = OSUtils::jsonParse(tags);
+		}
 	}
-	else if (tags == "null") {
-		out["tags"] = "[]";
-	}
-	else {
-		out["tags"] = OSUtils::jsonParse(tags);
+	catch (const nlohmann::json::parse_error& e) {
+		fprintf(stderr, "MemberChange member tags JSON parse error: %s\n", e.what());
+		fprintf(stderr, "tags: %s\n", mc.tags().c_str());
+		out["tags"] = nlohmann::json::array();
 	}
 
 	out["versionMajor"] = mc.version_major();
