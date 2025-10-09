@@ -312,19 +312,14 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 	out["id"] = nc.network_id();
 	out["name"] = nc.name();
 
-	if (nc.has_capabilities()) {
-		std::string caps = nc.capabilities();
-		if (caps == "null") {
-			out["capabilities"] = "null";
-		}
-		else {
-			out["capabilities"] = OSUtils::jsonParse(caps);
-		}
-		out["capabilities"] = OSUtils::jsonParse(caps);
+	std::string caps = nc.capabilities();
+	if (caps == "null") {
+		out["capabilities"] = "null";
 	}
 	else {
-		out["capabilities"] = "[]";
+		out["capabilities"] = OSUtils::jsonParse(caps);
 	}
+
 	out["mtu"] = nc.mtu();
 	out["multicastLimit"] = nc.multicast_limit();
 	out["private"] = nc.is_private();
@@ -336,32 +331,22 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 		out["remoteTraceTarget"] = "";
 	}
 
-	if (nc.has_rules()) {
-		std::string rules = nc.rules();
-		if (rules == "null") {
-			out["rules"] = "[]";
-		}
-		else {
-			out["rules"] = OSUtils::jsonParse(rules);
-		}
+	std::string rules = nc.rules();
+	if (rules == "null") {
+		out["rules"] = "[]";
 	}
 	else {
-		out["rules"] = "[]";
+		out["rules"] = OSUtils::jsonParse(rules);
 	}
 
 	out["rulesSource"] = nc.rules_source();
 
-	if (nc.has_tags()) {
-		std::string tags = nc.tags();
-		if (tags == "[]") {
-			out["tags"] = "[]";
-		}
-		else {
-			out["tags"] = OSUtils::jsonParse(tags);
-		}
+	std::string tags = nc.tags();
+	if (tags == "[]") {
+		out["tags"] = "[]";
 	}
 	else {
-		out["tags"] = "[]";
+		out["tags"] = OSUtils::jsonParse(tags);
 	}
 
 	if (nc.has_ipv4_assign_mode()) {
@@ -506,18 +491,15 @@ nlohmann::json toJson(const pbmessages::MemberChange_Member& mc, pbmessages::Mem
 	out["noAutoAssignIps"] = mc.no_auto_assign_ips();
 	out["ssoExempt"] = mc.sso_exempt();
 	out["authenticationExpiryTime"] = mc.auth_expiry_time();
-	if (mc.has_capabilities()) {
-		std::string caps = mc.capabilities();
-		if (caps == "null") {
-			out["capabilities"] = "[]";
-		}
-		else {
-			out["capabilities"] = OSUtils::jsonParse(caps);
-		}
-	}
-	else {
+
+	std::string caps = mc.capabilities();
+	if (caps == "null") {
 		out["capabilities"] = "[]";
 	}
+	else {
+		out["capabilities"] = OSUtils::jsonParse(caps);
+	}
+
 	out["creationTime"] = mc.creation_time();
 	out["identity"] = mc.identity();
 	out["lastAuthorizedTime"] = mc.last_authorized_time();
@@ -525,17 +507,12 @@ nlohmann::json toJson(const pbmessages::MemberChange_Member& mc, pbmessages::Mem
 	out["remoteTraceLevel"] = mc.remote_trace_level();
 	out["revision"] = mc.revision();
 
-	if (mc.has_tags()) {
-		std::string tags = mc.tags();
-		if (tags == "[]") {
-			out["tags"] = "[]";
-		}
-		else {
-			out["tags"] = OSUtils::jsonParse(tags);
-		}
+	std::string tags = mc.tags();
+	if (tags == "null") {
+		out["tags"] = "[]";
 	}
 	else {
-		out["tags"] = "[]";
+		out["tags"] = OSUtils::jsonParse(tags);
 	}
 
 	out["versionMajor"] = mc.version_major();
