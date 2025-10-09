@@ -311,7 +311,17 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 	out["objtype"] = "network";
 	out["id"] = nc.network_id();
 	out["name"] = nc.name();
-	out["capabilities"] = OSUtils::jsonParse(nc.capabilities());
+
+	if (nc.has_capabilities()) {
+		std::string caps = nc.capabilities();
+		if (caps == "null") {
+			out["capabilities"] = "null";
+		}
+		else {
+			out["capabilities"] = OSUtils::jsonParse(caps);
+		}
+		out["capabilities"] = OSUtils::jsonParse(caps);
+	}
 	out["mtu"] = nc.mtu();
 	out["multicastLimit"] = nc.multicast_limit();
 	out["private"] = nc.is_private();
@@ -322,9 +332,29 @@ nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::N
 	else {
 		out["remoteTraceTarget"] = "";
 	}
-	out["rules"] = OSUtils::jsonParse(nc.rules());
+
+	if (nc.has_rules()) {
+		std::string rules = nc.rules();
+		if (rules == "null") {
+			out["rules"] = "[]";
+		}
+		else {
+			out["rules"] = OSUtils::jsonParse(rules);
+		}
+	}
 	out["rulesSource"] = nc.rules_source();
-	out["tags"] = OSUtils::jsonParse(nc.tags());
+	if (nc.has_tags()) {
+		std::string tags = nc.tags();
+		if (tags == "[]") {
+			out["tags"] = "[]";
+		}
+		else {
+			out["tags"] = OSUtils::jsonParse(tags);
+		}
+	}
+	else {
+		out["tags"] = "[]";
+	}
 
 	if (nc.has_ipv4_assign_mode()) {
 		nlohmann::json ipv4mode;
