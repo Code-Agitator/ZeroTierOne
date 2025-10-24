@@ -26,7 +26,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         continue-on-error: false
         with:
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}
+          key: "${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}"
           shared-key: ${{ runner.os }}-cargo-
           workspaces: |
             rustybits/
@@ -37,14 +37,22 @@ jobs:
         run: |
           make selftest
           ./zerotier-selftest
-      - name: 'Tar files' # keeps permissions (execute)
-        run: tar -cvf zerotier-one.tar zerotier-one
-      - name: Archive production artifacts
-        uses: actions/upload-artifact@v4
+
+      - name: Set release filename
+        run: |
+          echo "RELEASE_FILE=zerotier-one-${{ env.VERSION }}-x86_64-unknown-linux-gnu" >> $env:GITHUB_ENV
+
+      - name: Rename executable with version
+        run: |
+          ren "zerotier-one" "${{ env.RELEASE_FILE }}"
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: zerotier-one-ubuntu-x64
-          path: zerotier-one.tar
-          retention-days: 7
+          files: ${{ env.RELEASE_FILE }}
+          tag_name: v${{ env.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build_macos:
     runs-on: macos-latest
@@ -71,7 +79,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         continue-on-error: false
         with:
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}
+          key: "${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}"
           shared-key: ${{ runner.os }}-cargo-
           workspaces: |
             rustybits/
@@ -81,14 +89,22 @@ jobs:
         run: |
           make selftest
           ./zerotier-selftest
-      - name: 'Tar files' # keeps permissions (execute)
-        run: tar -cvf zerotier-one.tar zerotier-one
-      - name: Archive production artifacts
-        uses: actions/upload-artifact@v4
+      - name: Set release filename
+        run: |
+          echo "RELEASE_FILE=zerotier-one-${{ env.VERSION }}-x86_64-apple-darwin" >> $env:GITHUB_ENV
+
+      - name: Rename executable with version
+        run: |
+          ren "zerotier-one" "${{ env.RELEASE_FILE }}"
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: zerotier-one-mac
-          path: zerotier-one.tar
-          retention-days: 7
+          files: ${{ env.RELEASE_FILE }}
+          tag_name: v${{ env.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
 
   build_windows:
@@ -110,7 +126,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         continue-on-error: false
         with:
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}
+          key: "${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}"
           shared-key: ${{ runner.os }}-cargo-
           workspaces: |
             rustybits/
@@ -132,10 +148,18 @@ jobs:
           $version = Select-String -Path "zerotier-one.spec" -Pattern "^Version:" | ForEach-Object { ($_ -split '\s+', 2)[1] }
           echo "VERSION=$version" >> $env:GITHUB_ENV
           echo "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Set release filename
+        run: |
+          echo "RELEASE_FILE=zerotier-one-${{ env.VERSION }}-x86_64-pc-windows-msvc.exe" >> $env:GITHUB_ENV
+
+      - name: Rename executable with version
+        run: |
+          ren "windows/Build/x64/Release/zerotier-one_x64.exe" "${{ env.RELEASE_FILE }}"
+
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
-          files: windows/Build/x64/Release/zerotier-one_x64.exe
+          files: windows/Build/x64/Release/${{ env.RELEASE_FILE }}
           tag_name: v${{ env.VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
