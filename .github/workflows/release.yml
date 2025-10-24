@@ -40,8 +40,7 @@ jobs:
 
       - name: Set release filename
         run: |
-          echo "RELEASE_FILE=zerotier-one-x86_64-unknown-linux-gnu" >> $env:GITHUB_ENV
-
+          echo "RELEASE_FILE=zerotier-one-x86_64-unknown-linux-gnu" >> $GITHUB_ENV
       - name: Rename executable with version
         run: |
           mv "zerotier-one" "${{ env.RELEASE_FILE }}"
@@ -91,7 +90,7 @@ jobs:
           ./zerotier-selftest
       - name: Set release filename
         run: |
-          echo "RELEASE_FILE=zerotier-one-universal-apple-darwin" >> $env:GITHUB_ENV
+          echo "RELEASE_FILE=zerotier-one-x86_64-unknown-linux-gnu" >> $GITHUB_ENV
 
       - name: Rename executable with version
         run: |
