@@ -40,11 +40,11 @@ jobs:
 
       - name: Set release filename
         run: |
-          echo "RELEASE_FILE=zerotier-one-${{ env.VERSION }}-x86_64-unknown-linux-gnu" >> $env:GITHUB_ENV
+          echo "RELEASE_FILE=zerotier-one-x86_64-unknown-linux-gnu" >> $env:GITHUB_ENV
 
       - name: Rename executable with version
         run: |
-          ren "zerotier-one" "${{ env.RELEASE_FILE }}"
+          mv "zerotier-one" "${{ env.RELEASE_FILE }}"
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
@@ -91,11 +91,11 @@ jobs:
           ./zerotier-selftest
       - name: Set release filename
         run: |
-          echo "RELEASE_FILE=zerotier-one-${{ env.VERSION }}-x86_64-apple-darwin" >> $env:GITHUB_ENV
+          echo "RELEASE_FILE=zerotier-one-universal-apple-darwin" >> $env:GITHUB_ENV
 
       - name: Rename executable with version
         run: |
-          ren "zerotier-one" "${{ env.RELEASE_FILE }}"
+          mv "zerotier-one" "${{ env.RELEASE_FILE }}"
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
@@ -150,7 +150,7 @@ jobs:
           echo "version=$version" >> $env:GITHUB_OUTPUT
       - name: Set release filename
         run: |
-          echo "RELEASE_FILE=zerotier-one-${{ env.VERSION }}-x86_64-pc-windows-msvc.exe" >> $env:GITHUB_ENV
+          echo "RELEASE_FILE=zerotier-one-x86_64-pc-windows-msvc.exe" >> $env:GITHUB_ENV
 
       - name: Rename executable with version
         run: |
